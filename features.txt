@@ -1,0 +1,5 @@
+Folder selection to pick the current case to segment
+    Image selection(at the bottom, similar to Unity)
+Segmentor selection to pick the Pytorch model to autosegment to assist
+Polygon-based segmentor tool to draw the segmentation 
+    Show the previous case to the left with a live preview of the whole segmentation on the left with an opacity slider
