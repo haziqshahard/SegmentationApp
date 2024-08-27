@@ -43,7 +43,12 @@ class PolygonDrawer:
             if len(self.points) > 0:
                 line = self.canvas.create_line(self.points[-1], selected_point, fill="blue", tags="line")
                 self.lines.append(line)
+                # If it's a closed polygon, fill it
+                self.check_and_fill_polygon()
+
+            
         elif clicked_items and "line" in self.canvas.gettags(clicked_items[0]):
+            #----NEEDS REDOING------
             # If clicked on a line, place a new dot on that line
             line = clicked_items[0]
             coords = self.canvas.coords(line)
@@ -81,8 +86,6 @@ class PolygonDrawer:
                 line = self.canvas.create_line(self.points[-2], self.points[-1], fill="blue", tags="line")
                 self.lines.append(line)
             
-            # If it's a closed polygon, fill it
-            self.check_and_fill_polygon()
     
     def on_hover_enter(self, event, dot):
         self.canvas.itemconfig(dot, fill="yellow")
@@ -146,7 +149,8 @@ class PolygonDrawer:
     
     def check_and_fill_polygon(self):
         if len(self.points) > 2 and self.points[0] == self.points[-1]:
-            self.canvas.create_polygon(self.points, fill="lightblue", outline="blue", tags="polygon")
+            print("Polygon Valid")
+            self.canvas.create_polygon(self.points, fill="blue", outline="blue", tags="polygon")
     
 if __name__ == "__main__":
     root = tk.Tk()

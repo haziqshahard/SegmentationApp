@@ -26,9 +26,18 @@ class PolygonDrawer:
         self.context_menu = tk.Menu(root, tearoff=0)
         self.context_menu.add_command(label="Delete Polygon", command=self.delete_polygon)
         
+
+        # Initialize dragging variables
+        self.drag_data = {"item": None, "x": 0, "y": 0}
+
         # Bind mouse events
         self.canvas.bind("<Button-1>", self.add_or_select_point)  # Left click to add or select a point
         self.canvas.bind("<Button-3>", self.handle_right_click)    # Right click to delete or show context menu
+
+        self.canvas.bind("<Button-1>", self.start_drag, add="+")    # Start dragging
+        self.canvas.bind("<B1-Motion>", self.do_drag, add="+")       # Dragging motion
+        self.canvas.bind("<ButtonRelease-1>", self.stop_drag, add="+") # Stop dragging
+
 
     def add_or_select_point(self, event):
         clicked_items = self.canvas.find_withtag("current")
@@ -43,7 +52,12 @@ class PolygonDrawer:
             if len(self.points) > 0:
                 line = self.canvas.create_line(self.points[-1], selected_point, fill="blue", tags="line")
                 self.lines.append(line)
+                # If it's a closed polygon, fill it
+                self.check_and_fill_polygon()
+
+            
         elif clicked_items and "line" in self.canvas.gettags(clicked_items[0]):
+            #----NEEDS REDOING------
             # If clicked on a line, place a new dot on that line
             line = clicked_items[0]
             coords = self.canvas.coords(line)
@@ -63,27 +77,41 @@ class PolygonDrawer:
             # Insert the new point into the points list and redraw the lines
             self.points.insert(index, new_point)
             self.redraw_polygon()
+
         else:
             # If no dot or line is selected, add a new dot
             x, y = event.x, event.y
             self.points.append((x, y))
             
-            # Draw the lines before the dots
-            self.redraw_polygon()
-            
             # Draw the point
             dot = self.canvas.create_oval(x-dot_size, y-dot_size, x+dot_size, y+dot_size, fill="red", tags="dot")
             self.dots.append(dot)
             
+            # Connect points if there are more than one
+            if len(self.points) > 1:
+                line = self.canvas.create_line(self.points[-2], self.points[-1], fill="blue", tags="line")
+                self.lines.append(line)
+
             # Bind hover events
-            self.canvas.tag_bind(dot, "<Enter>", lambda e, d=dot: self.on_hover_enter(e, d))
-            self.canvas.tag_bind(dot, "<Leave>", lambda e, d=dot: self.on_hover_leave(e, d))
+            self.canvas.tag_bind(dot, "<Enter>", lambda e, d=dot: self.dot_on_hover_enter(e, d))
+            self.canvas.tag_bind(dot, "<Leave>", lambda e, d=dot: self.dot_on_hover_leave(e, d))
+
+            self.canvas.tag_bind(line, "<Enter>", lambda f, l=line: self.line_on_hover_enter(f, l))
+            self.canvas.tag_bind(line, "<Leave>", lambda f, l=line: self.line_on_hover_leave(f, l))
+            
     
-    def on_hover_enter(self, event, dot):
+    def dot_on_hover_enter(self, event, dot):
         self.canvas.itemconfig(dot, fill="yellow")
     
-    def on_hover_leave(self, event, dot):
+    def dot_on_hover_leave(self, event, dot):
         self.canvas.itemconfig(dot, fill="red")
+    
+    def line_on_hover_enter(self,event,line):
+        self.canvas.itemconfig(line, fill="green")
+    
+    def line_on_hover_leave(self,event,line):
+        self.canvas.itemconfig(line, fill="blue")
+
     
     def handle_right_click(self, event):
         clicked_items = self.canvas.find_withtag("current")
@@ -130,25 +158,48 @@ class PolygonDrawer:
         self.lines.clear()
     
     def redraw_polygon(self):
-        # Clear existing lines
         for line in self.lines:
             self.canvas.delete(line)
         self.lines.clear()
-        
-        # Draw lines between points
         if len(self.points) > 1:
             for i in range(len(self.points) - 1):
                 line = self.canvas.create_line(self.points[i], self.points[i+1], fill="blue", tags="line")
                 self.lines.append(line)
-                
-            # Check for a closed polygon and fill it
-            if self.points and self.points[0] == self.points[-1]:
-                self.canvas.create_polygon(self.points, fill="lightblue", outline="blue", tags="polygon")
+        self.check_and_fill_polygon()
     
     def check_and_fill_polygon(self):
         if len(self.points) > 2 and self.points[0] == self.points[-1]:
-            self.canvas.create_polygon(self.points, fill="lightblue", outline="blue", tags="polygon")
+            print("Polygon Valid")
+            self.canvas.create_polygon(self.points, fill="blue", outline="blue", tags="polygon")
 
+    def start_drag(self, event):
+        item = self.canvas.find_withtag("current")[0]
+        if "dot" in self.canvas.gettags(item):
+            self.drag_data["item"] = item
+            self.drag_data["x"] = event.x
+            self.drag_data["y"] = event.y
+    
+    def do_drag(self, event):
+        if self.drag_data["item"]:
+            item = self.drag_data["item"]
+            dx = event.x - self.drag_data["x"]
+            dy = event.y - self.drag_data["y"]
+            
+            # Move the dot and update the coordinates
+            self.canvas.move(item, dx, dy)
+            index = self.dots.index(item)
+            old_x, old_y = self.points[index]
+            new_x, new_y = old_x + dx, old_y + dy
+            self.points[index] = (new_x, new_y)
+            
+            self.drag_data["x"] = event.x
+            self.drag_data["y"] = event.y
+            
+            self.redraw_polygon()  # Redraw polygon to reflect new positions
+    
+    def stop_drag(self, event):
+        self.drag_data["item"] = None
+    
 if __name__ == "__main__":
     root = tk.Tk()
     app = PolygonDrawer(root)
