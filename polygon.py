@@ -12,8 +12,7 @@ class PolygonDrawer:
     -The space fills with a choosable color
     -The whole polygon can be removed
     #Current known bugs:
-    -Polygon right click is not currently functioning
-    -Dots placed in the middle of lines connect to the last placed dot, not the nearest
+    -Possibly make the last placed point connect to the nearest point, rather than the point placed before it
     """
     def __init__(self, root):
         self.root = root
@@ -58,6 +57,10 @@ class PolygonDrawer:
         if clicked_items and "dot" in self.canvas.gettags(clicked_items[0]):
             self.drag_data["item"] = clicked_items[0]
             self.is_dragging = False
+        elif clicked_items and "line" in self.canvas.gettags(clicked_items[0]):
+            self.drag_data["item"]=clicked_items[0]
+            print("clicking a line")
+            self.add_point_to_line(event, clicked_items[0])
         else:
             self.drag_data["item"] = None
 
@@ -121,12 +124,8 @@ class PolygonDrawer:
     def handle_right_click(self, event):
         clicked_items = self.canvas.find_withtag("current")
 
-        if clicked_items:
-            if "dot" in self.canvas.gettags(clicked_items[0]):
+        if clicked_items and "dot" in self.canvas.gettags(clicked_items[0]):
                 self.delete_point(event, clicked_items[0])
-            elif "line" in self.canvas.gettags(clicked_items[0]):
-                print("clicking a line")
-                self.add_point_to_line(event, clicked_items[0])
         else:
             self.show_context_menu(event)
     
@@ -144,24 +143,67 @@ class PolygonDrawer:
         print(len(self.dots))
         self.redraw_points()
     
+    # def add_point_to_line(self, event, line):
+    #     # Get the coordinates of the line
+    #     coords = self.canvas.coords(line)
+    #     x1, y1, x2, y2 = coords
+        
+    #     # Calculate the midpoint
+    #     mid_x = (x1 + x2) / 2
+    #     mid_y = (y1 + y2) / 2
+        
+    #     # Insert the new point in the list at the correct position
+    #     index = self.lines.index(line)
+    #     self.points.insert(index + 1, (mid_x, mid_y))
+        
+    #     # Redraw the polygon with the new point
+    #     self.redraw_polygon()
+    #     dot = self.draw_point(mid_x, mid_y)
+    #     self.dots.insert(index + 1, dot)
+
     def add_point_to_line(self, event, line):
+        # Get the exact coordinates where the user clicked
+        new_x, new_y = event.x, event.y
+        
         # Get the coordinates of the line
         coords = self.canvas.coords(line)
         x1, y1, x2, y2 = coords
         
-        # Calculate the midpoint
-        mid_x = (x1 + x2) / 2
-        mid_y = (y1 + y2) / 2
+        # Find the index of the line in the list of lines
+        line_index = self.lines.index(line)
         
-        # Insert the new point in the list at the correct position
-        index = self.lines.index(line)
-        self.points.insert(index + 1, (mid_x, mid_y))
+        # Insert the new point into the points list at the correct position
+        # The new point should be inserted right after the starting point of the line
+        start_point_index = line_index
+        end_point_index = (line_index + 1) % len(self.points)
         
-        # Redraw the polygon with the new point
-        self.redraw_polygon()
-        dot = self.draw_point(mid_x, mid_y)
-        self.dots.insert(index + 1, dot)
-
+        self.points.insert(end_point_index, (new_x, new_y))
+        
+        # Remove the old line since it will be replaced by two new lines
+        self.canvas.delete(line)
+        self.lines.pop(line_index)
+        
+        # Create two new lines: one from the first point to the new dot, and another from the new dot to the second point
+        line1 = self.canvas.create_line(x1, y1, new_x, new_y, fill="blue", tags="line")
+        line2 = self.canvas.create_line(new_x, new_y, x2, y2, fill="blue", tags="line")
+        
+        # Insert the new lines into the lines list at the correct positions
+        self.lines.insert(line_index, line1)
+        self.lines.insert(line_index + 1, line2)
+        
+        # Bind hover events to the new lines
+        self.canvas.tag_bind(line1, "<Enter>", lambda e, l=line1: self.on_line_hover_enter(e, l))
+        self.canvas.tag_bind(line1, "<Leave>", lambda e, l=line1: self.on_line_hover_leave(e, l))
+        self.canvas.tag_bind(line2, "<Enter>", lambda e, l=line2: self.on_line_hover_enter(e, l))
+        self.canvas.tag_bind(line2, "<Leave>", lambda e, l=line2: self.on_line_hover_leave(e, l))
+        
+        # Draw the new dot at the clicked position
+        dot = self.draw_point(new_x, new_y)
+        self.dots.insert(end_point_index, dot)
+        
+        # # Redraw the entire polygon with the new structure
+        # self.redraw_polygon()
+        
     # def delete_point(self, event, dot):
     #     index = self.dots.index(dot)
     #     point_to_delete = self.points[index]
@@ -256,7 +298,6 @@ class PolygonDrawer:
             for i in range(len(self.points) - 1):
                 line = self.canvas.create_line(self.points[i], self.points[i+1], fill="blue", tags="line")
                 self.lines.append(line)
-
                 # Bind hover events to the line
                 self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
                 self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))
