@@ -9,8 +9,6 @@ set_default_color_theme("GhostTrain.json")
 def doNothing():
     print("ok ok I wont")
 
-
-
 app=CTk()
 app.geometry("500x400")
 
