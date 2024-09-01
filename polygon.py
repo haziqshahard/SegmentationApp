@@ -25,7 +25,7 @@ class PolygonDrawer:
         
         # Create Canvas
         self.canvas = tk.Canvas(root, width=self.image.width, height=self.image.height)
-        self.canvas.pack()
+        self.canvas.pack(fill=tk.BOTH, expand=True)
         
         # Display image on canvas
         self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
@@ -48,6 +48,13 @@ class PolygonDrawer:
         self.canvas.bind("<B1-Motion>", self.do_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
         self.canvas.bind("<Button-3>", self.handle_right_click)
+        
+        self.dotcolor = "#E2856E"
+        self.dothovercolor = "#55DDE0"
+        self.linecolor = "#001C55"
+        self.linehovercolor = "#55DDE0"
+
+        self.polygoncolor = (0,0,255,int(0.2*255))
 
     def on_mouse_down(self, event):
         self.drag_data["x"] = event.x
@@ -85,9 +92,10 @@ class PolygonDrawer:
                 self.drag_data["x"] = event.x
                 self.drag_data["y"] = event.y
 
-                self.redraw_polygon()
+                self.redraw_polygon() 
             else:
                 self.is_dragging = False
+        
 
     def on_mouse_up(self, event):
         if not self.is_dragging and self.drag_data["item"] is None:
@@ -96,7 +104,7 @@ class PolygonDrawer:
 
     def draw_point(self, x, y):
         dot_size = 6
-        dot = self.canvas.create_oval(x-dot_size, y-dot_size, x+dot_size, y+dot_size, fill="red", tags="dot")
+        dot = self.canvas.create_oval(x-dot_size, y-dot_size, x+dot_size, y+dot_size, fill=self.dotcolor, tags="dot")
 
         # Bind hover events to the dot
         self.canvas.tag_bind(dot, "<Enter>", lambda e, d=dot: self.on_hover_enter(e, d))
@@ -110,16 +118,16 @@ class PolygonDrawer:
         return dot
 
     def on_hover_enter(self, event, dot):
-        self.canvas.itemconfig(dot, fill="yellow")
+        self.canvas.itemconfig(dot, fill=self.dothovercolor)
     
     def on_hover_leave(self, event, dot):
-        self.canvas.itemconfig(dot, fill="red")
+        self.canvas.itemconfig(dot, fill=self.dotcolor)
 
     def on_line_hover_enter(self, event, line):
-        self.canvas.itemconfig(line, fill="yellow")
+        self.canvas.itemconfig(line, fill=self.linehovercolor)
 
     def on_line_hover_leave(self, event, line):
-        self.canvas.itemconfig(line, fill="blue")
+        self.canvas.itemconfig(line, fill=self.linecolor)
 
     def handle_right_click(self, event):
         clicked_items = self.canvas.find_withtag("current")
@@ -184,8 +192,8 @@ class PolygonDrawer:
         self.lines.pop(line_index)
         
         # Create two new lines: one from the first point to the new dot, and another from the new dot to the second point
-        line1 = self.canvas.create_line(x1, y1, new_x, new_y, fill="blue", tags="line")
-        line2 = self.canvas.create_line(new_x, new_y, x2, y2, fill="blue", tags="line")
+        line1 = self.canvas.create_line(x1, y1, new_x, new_y, fill=self.linecolor, tags="line")
+        line2 = self.canvas.create_line(new_x, new_y, x2, y2, fill=self.linecolor, tags="line")
         
         # Insert the new lines into the lines list at the correct positions
         self.lines.insert(line_index, line1)
@@ -270,7 +278,7 @@ class PolygonDrawer:
         draw = ImageDraw.Draw(overlay)
 
         #Draw the polygon on the image
-        draw.polygon(self.points, fill = (0,0,255,int(0.2*255)))
+        draw.polygon(self.points, fill = self.polygoncolor)
 
         #Composite overlay onto background image
         combined = Image.alpha_composite(self.image.convert('RGBA'), overlay)
@@ -283,6 +291,7 @@ class PolygonDrawer:
         for line in self.lines:
             self.canvas.delete(line)
         self.lines.clear()
+
         if self.polygon:
             self.canvas.delete(self.polygon)
         self.polygon = None
@@ -296,26 +305,35 @@ class PolygonDrawer:
                 self.canvas.tag_lower(poly, lowest_item_id)
 
             for i in range(len(self.points) - 1):
-                line = self.canvas.create_line(self.points[i], self.points[i+1], fill="blue", tags="line")
+                line = self.canvas.create_line(self.points[i], self.points[i+1], fill=self.linecolor, tags="line")
                 self.lines.append(line)
                 # Bind hover events to the line
                 self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
                 self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))
 
             if len(self.points) > 2 and self.points[0] != self.points[-1]:
-                line = self.canvas.create_line(self.points[-1], self.points[0], fill="blue", tags="line")
+                line = self.canvas.create_line(self.points[-1], self.points[0], fill=self.linecolor, tags="line")
                 self.lines.append(line)
                 self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
                 self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))
+        for dot in self.dots:
+            self.canvas.tag_raise(dot)
 
     def redraw_points(self):
-        for i, (x, y) in enumerate(self.points):
-            dot = self.dots[i]
-            dot_size = 6
-            self.canvas.coords(dot, x-dot_size, y-dot_size, x+dot_size, y+dot_size)
-            # Re-bind hover events to ensure they remain active
-            self.canvas.tag_bind(dot, "<Enter>", lambda e, d=dot: self.on_hover_enter(e, d))
-            self.canvas.tag_bind(dot, "<Leave>", lambda e, d=dot: self.on_hover_leave(e, d))
+        # Clear existing dots
+        for dot in self.dots:
+            self.canvas.delete(dot)
+        self.dots.clear()
+
+        # Draw the dots based on the points list
+        for (x, y) in self.points:
+            dot = self.draw_point(x, y)
+            self.dots.append(dot)
+        
+        # Ensure that dots are always on top
+        for dot in self.dots:
+            self.canvas.tag_raise(dot)
+
 
     # def redraw_points(self):
     #     #Clear existing points
