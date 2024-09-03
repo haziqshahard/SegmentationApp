@@ -6,6 +6,13 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 
 class ImageScroller(tk.Frame):
+    """
+    Features to add:
+    has to check for the existence of a "segmented" folder within the current directory
+    if it does exist, draw a polygon of "region of interest" on top of the existing slice
+    the opacity has to be adjustable
+        Add a slider with polygon opacity adjustment
+    """
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
