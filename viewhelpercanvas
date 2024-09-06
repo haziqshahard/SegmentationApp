@@ -12,6 +12,8 @@ class ImageScroller(tk.Frame):
     if it does exist, draw a polygon of "region of interest" on top of the existing slice
     the opacity has to be adjustable
         Add a slider with polygon opacity adjustment
+    Has to be able to "click" on the window to direct the time/space scrolling, the border of the window has to change 
+    Has to check live for segmentation being drawn, and also check for 
     """
     def __init__(self, master=None):
         super().__init__(master)
