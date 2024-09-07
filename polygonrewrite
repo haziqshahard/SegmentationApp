@@ -1,0 +1,118 @@
+import tkinter as tk 
+from PIL import Image, ImageTk, ImageDraw
+from tkinter import filedialog
+
+class PolygonDrawer:
+    """
+    #Window that enables the user to draw on the image required
+    #Features:
+    -Dots can be individually placed, deletable
+    -Lines automatically generate between each dot
+    -The space fills with a choosable color
+    -The whole polygon can be removed
+    #Current known bugs:
+    -Possibly make the last placed point connect to the nearest point, rather than the point placed before it
+    -Resizing of all polygons and objects does not scale correctly, likely due to the anchor point of scaling
+        -Rather than scaling the image and storing it, just pull it from the file location each time and resave that after scaling, to avoid loss of info
+    #Features to be added
+    -Points/Line color/size needs to be adjustable
+        .Have to bind right click events directly to the objects?
+    """
+    def __init__(self,root):
+        #Defining variables and windows
+        self.root = root
+        self.root.title("Polygon Drawer")
+        
+        pad_frame = tk.Frame(borderwidth = 0, background="bisque", width = 200,height=200)
+        pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
+        
+        #Loading image
+        #--To be changed to a button next time--
+        #--Must be dynamic, able to change the image whenever
+        self.image_path = filedialog.askopenfilename(title="Select an image")
+        self.pilimage = Image.open(self.image_path)
+        self.photo = ImageTk.PhotoImage(self.pilimage)
+        # Track the original size of the image
+        self.original_width = self.pilimage.width
+        self.original_height = self.pilimage.height
+        self.aspect_ratio = self.original_width/self.original_height
+
+        #Create Canvas
+        self.canvas = tk.Canvas(root, width=self.pilimage.width, height=self.pilimage.height,highlightbackground="blue", highlightthickness=1,scrollregion=(0, 0, 0, 0))
+        def set_aspect(content_frame, pad_frame, aspect_ratio):
+        # Taken from user Bryan Oakley : https://stackoverflow.com/a/16548607
+        # a function which places a frame within a containing frame, and
+        # then forces the inner frame to keep a specific aspect ratio
+
+            def enforce_aspect_ratio(event):
+                # when the pad window resizes, fit the content into it,
+                # either by fixing the width or the height and then
+                # adjusting the height or width based on the aspect ratio.
+
+                # start by using the width as the controlling dimension
+                desired_width = event.width
+                desired_height = int(event.width / aspect_ratio)
+
+                # if the window is too tall to fit, use the height as
+                # the controlling dimension
+                if desired_height > event.height:
+                    desired_height = event.height
+                    desired_width = int(event.height * aspect_ratio)
+
+                # place the window, giving it an explicit size
+                content_frame.place(in_=pad_frame, x=0, y=0, 
+                    width=desired_width, height=desired_height)
+
+            pad_frame.bind("<Configure>", enforce_aspect_ratio)
+        set_aspect(self.canvas,pad_frame, aspect_ratio=self.aspect_ratio)
+        self.root.rowconfigure(0, weight=1)
+        self.root.columnconfigure(0,weight=1)
+        pad_frame.config(width=self.original_width, height=self.original_height)
+
+        #Display image on canvas
+        self.canvimg=self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items
+
+        #------BINDINGS-------
+        # Bind canvas resize event
+        self.root.bind("<Configure>", self.on_resize)
+        
+        # Initialize the scale factor
+        self.scale_factor = 1.0
+
+    def on_resize(self,event):
+         #Implemented from https://www.tutorialspoint.com/how-to-set-the-canvas-size-properly-in-tkinter
+        #Initializing new width and height
+        new_width = 1
+        new_height = 1
+
+        scale_x = self.canvas.winfo_width() / self.original_width
+        scale_y = self.canvas.winfo_height() / self.original_height
+
+        # print("originalwidth: ", self.original_width)
+        # print("original_height: ", self.original_height)
+        
+        # Choose the smaller scale factor to maintain aspect ratio
+        self.scale_factor = min(scale_x, scale_y)
+        # print("scale_factor: ", self.scale_factor)
+
+        # Calculate new width and height while maintaining aspect ratio
+        new_width = int(self.original_width * self.scale_factor)
+        new_height = int(self.original_height * self.scale_factor)
+
+        if new_height == 0:
+            new_height = 1
+
+        # print("new_width: ", new_width)
+        # print("new_height: ", new_height)
+
+        scaled_image = self.pilimage.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        self.scaled_photo = ImageTk.PhotoImage(scaled_image)
+
+        #Update canvas size
+        self.canvas.config(width=new_width,height = new_height)
+        self.canvas.itemconfig(self.canvimg, image=self.scaled_photo)
+        
+if __name__ == "__main__":
+       root=tk.Tk()
+       app = PolygonDrawer(root)
+       root.mainloop()
