@@ -3,7 +3,6 @@ from PIL import Image, ImageTk, ImageDraw
 from tkinter import filedialog
 
 class PolygonDrawer:
-    
     """
     #Window that enables the user to draw on the image required
     #Features:
@@ -72,30 +71,8 @@ class PolygonDrawer:
         # Track the scale factor
         self.scale_factor = 1.0
 
-    # def on_resize(self, event):
-    #     #CURRENTLY 
-    #     # Calculate the new scale factor
-    #     scale_x = event.width / self.original_width
-    #     scale_y = event.height / self.original_height
-    #     self.scale_factor = min(scale_x, scale_y)
-
-    #     # Resize image
-    #     new_width = int(self.original_width * self.scale_factor)
-    #     new_height = int(self.original_height * self.scale_factor)
-    #     scaled_image = self.image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-    #     self.scaled_photo = ImageTk.PhotoImage(scaled_image)
-        
-    #     # Update the canvas image
-    #     self.canvas.itemconfig(self.image_item,image=self.scaled_photo)
-    #     # self.canvas.create_image(0, 0, image=self.scaled_photo, anchor=tk.NW)
-
-    #     # Scale all objects on the canvas
-    #     items = self.canvas.find_all()
-    #     for item in items:
-    #         self.canvas.scale(item, 0,0, self.scale_factor, self.scale_factor)
-    #     self.canvas.configure(scrollregion=self.canvas.bbox("all"))  # Update scroll region if needed
-
     def on_resize(self, event):
+        """"MAKE IT SO THAT ASPECT RATIO OF CANVAS DOES NOT CHANGE"""
         # Calculate the new scale factor
         # Calculate the new scale factor based on the original image size and the new canvas size
         scale_x = self.canvas.winfo_width() / self.original_width
