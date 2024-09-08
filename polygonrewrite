@@ -2,6 +2,7 @@ import tkinter as tk
 from PIL import Image, ImageTk, ImageDraw
 from tkinter import filedialog
 import numpy as np
+import os
 
 class PolygonDrawer:
     """
@@ -21,13 +22,16 @@ class PolygonDrawer:
         self.root = root
         self.root.title("Polygon Drawer")
         
+
+
         pad_frame = tk.Frame(borderwidth = 0, background="bisque", width = 200,height=200)
+        # pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
         pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
-        
         #Loading image
         #--To be changed to a button next time--
         #--Must be dynamic, able to change the image whenever
         self.image_path = filedialog.askopenfilename(title="Select an image")
+        self.time = os.path.basename(self.image_path)[5:8]
         self.pilimage = Image.open(self.image_path)
         self.photo = ImageTk.PhotoImage(self.pilimage)
         
@@ -70,6 +74,15 @@ class PolygonDrawer:
         self.root.columnconfigure(0,weight=1)
         pad_frame.config(width=self.original_width, height=self.original_height)
 
+        #Save image button
+        self.savedialog = tk.Frame(master=self.root)
+        self.savedialog.grid(row=1, column=0, padx=5, pady=5)
+
+        self.label = tk.Label(master=self.savedialog, text="test")
+        btn = tk.Button(master=self.savedialog, text="Save Image", command=self.save_mask)
+        self.label.grid(row=0, column=0,padx=5, pady=5)
+        btn.grid(row=1, column=0, padx=5, pady=5)
+
         #Display image on canvas
         self.canvimg=self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items
 
@@ -109,7 +122,6 @@ class PolygonDrawer:
         self.drawptbtwline = True
         self.context_menu = tk.Menu(root, tearoff=0)
         self.context_menu.add_command(label="Delete Polygon", command=self.delete_polygon)
-
 
         #-------COLORS-------
         #Eventually these will be adjustable
@@ -432,6 +444,23 @@ class PolygonDrawer:
         self.dots.clear()
         self.lines.clear()
         self.polygon = None
+
+    def save_mask(self):
+        mask = Image.new('L', self.pilimage.size, 0)
+        draw = ImageDraw.Draw(mask)
+
+        draw.polygon(self.points, outline=1, fill=255)
+        
+        folder_path = os.path.dirname(self.image_path) + "/segmented"
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)  # Creates folder and intermediate directories if they don't exist
+
+        impath = folder_path + "/Segmented Slice" + self.time + ".png"
+        mask.save(impath)
+
+        #Maybe make this able to open the image/parent folder when clicked?
+        self.label = tk.Label(master=self.savedialog, text=f"Image saved to {impath}")
+        self.label.grid(row=0, column=0,padx=5, pady=5)
 
     #----------HOVER EVENTS----------
     def on_hover_enter(self, event, dot):
