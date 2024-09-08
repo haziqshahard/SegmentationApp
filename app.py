@@ -40,10 +40,7 @@ editMenu.add_command(label="Undo",command=doNothing)
 # frame.pack(expand=True)
 
 # btn = CTkButton(master=frame, text="Click Me", corner_radius=32,command=doNothing)
-# btn.place(relx=0.5, rely=0.5, anchor="center")
-
-
-
+# btn.place(relx=0.5, rely=0.5, anchor="center"_
 app.mainloop()
 
 # tabview = CTkTabview(master=app)
