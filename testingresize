@@ -1,0 +1,71 @@
+import tkinter as tk
+from PIL import Image, ImageTk
+
+class ResizableDrawingApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Resizable Drawing Application")
+
+        # Create a canvas with scrollbars
+        self.canvas = tk.Canvas(self.root, bg='white')
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        # Store the shapes drawn
+        self.shapes = []
+
+        # Bind events for drawing shapes
+        self.canvas.bind("<Button-1>", self.on_click)
+        self.canvas.bind("<B1-Motion>", self.on_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_release)
+
+        # Variables to track the starting point of a shape
+        self.start_x, self.start_y = None, None
+        self.current_shape = None
+
+        # Bind window resize event
+        self.root.bind("<Configure>", self.on_resize)
+
+        # Store initial canvas dimensions for scaling
+        self.original_width = self.canvas.winfo_width()
+        self.original_height = self.canvas.winfo_height()
+
+    def on_click(self, event):
+        """Called when the user clicks the mouse."""
+        self.start_x, self.start_y = event.x, event.y
+        self.current_shape = self.canvas.create_rectangle(
+            self.start_x, self.start_y, self.start_x, self.start_y, outline='black'
+        )
+
+    def on_drag(self, event):
+        """Called when the user drags the mouse to draw a shape."""
+        # Update the current shape while dragging
+        self.canvas.coords(self.current_shape, self.start_x, self.start_y, event.x, event.y)
+
+    def on_release(self, event):
+        """Called when the user releases the mouse button."""
+        # Finalize the shape and store it
+        self.shapes.append((self.current_shape, self.canvas.coords(self.current_shape)))
+
+    def on_resize(self, event):
+        """Called when the window is resized."""
+        # Calculate the scaling factors
+        new_width = self.canvas.winfo_width()
+        new_height = self.canvas.winfo_height()
+
+        scale_x = new_width / self.original_width
+        scale_y = new_height / self.original_height
+
+        # Resize all shapes based on the new scale
+        for shape, coords in self.shapes:
+            scaled_coords = [coords[0] * scale_x, coords[1] * scale_y, coords[2] * scale_x, coords[3] * scale_y]
+            self.canvas.coords(shape, *scaled_coords)
+
+        # Update the original dimensions to the new ones
+        self.original_width = new_width
+        self.original_height = new_height
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ResizableDrawingApp(root)
+    root.mainloop()

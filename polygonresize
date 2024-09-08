@@ -146,9 +146,38 @@ class PolygonDrawer:
         self.canvas.config(width=new_width,height = new_height)
         self.canvas.itemconfig(self.canvimg, image=self.scaled_photo)
 
+            # Scale the dots, lines, and polygons based on the original positions and new scale factor
+        self.scale_items()
+
+    def scale_items(self):
+        """Scales all items (dots, lines, polygons) based on the current scale factor."""
+        
+        # Scale dots
+        for i, dot in enumerate(self.dots):
+            # Original point coordinates
+            orig_x, orig_y = self.points[i]
+            new_x = orig_x * self.scale_factor
+            new_y = orig_y * self.scale_factor
+
+            # Update the dot position
+            dot_size = self.dot_size * self.scale_factor
+            self.canvas.coords(dot, new_x - dot_size, new_y - dot_size, new_x + dot_size, new_y + dot_size)
+
+        # Scale lines
+        for i, line in enumerate(self.lines):
+            # Original line coordinates
+            orig_coords = self.canvas.coords(line)
+            new_coords = [coord * self.scale_factor for coord in orig_coords]
+
+            # Update the line position
+            self.canvas.coords(line, *new_coords)
+
+        # Redraw the polygon if it exists
+        if self.polygon:
+            self.redraw_polygon()
+
         #RESIZING DOTS, LINES AND POLYGON:
         #Have to scale the dots, the polygon, and the lines to match
-
         #What it has to do, is take the current objects and scale them all according to the scale factor without updating the item itself
         #Pass it on to  self.redraw_polygon?
 
@@ -237,7 +266,8 @@ class PolygonDrawer:
 
     #----------POINT ACTIONS----------
     def draw_point(self,x,y):
-        dot = self.canvas.create_oval(x-self.dot_size, y-self.dot_size, x+self.dot_size, y+self.dot_size, fill=self.dotcolor, tags="dot")
+        dot_size = self.dot_size * self.scale_factor
+        dot = self.canvas.create_oval(x-dot_size, y-dot_size, x+dot_size, y+dot_size, fill=self.dotcolor, tags="dot")
 
         # Bind hover events to the dot
         self.canvas.tag_bind(dot, "<Enter>", lambda e, d=dot: self.on_hover_enter(e, d))
@@ -283,8 +313,8 @@ class PolygonDrawer:
         self.lines.pop(line_index)
         
         # Create two new lines: one from the first point to the new dot, and another from the new dot to the second point
-        line1 = self.canvas.create_line(x1, y1, new_x, new_y, fill=self.linecolor, tags="line", width=self.line_width)
-        line2 = self.canvas.create_line(new_x, new_y, x2, y2, fill=self.linecolor, tags="line", width=self.line_width)
+        line1 = self.canvas.create_line(x1, y1, new_x, new_y, fill=self.linecolor, tags="line", width=self.line_width*self.scale_factor)
+        line2 = self.canvas.create_line(new_x, new_y, x2, y2, fill=self.linecolor, tags="line", width=self.line_width*self.scale_factor)
         
         # Insert the new lines into the lines list at the correct positions
         self.lines.insert(line_index, line1)
@@ -364,14 +394,14 @@ class PolygonDrawer:
                 self.canvas.tag_lower(poly, lowest_item_id)
 
             for i in range(len(self.points) - 1):
-                line = self.canvas.create_line(self.points[i], self.points[i+1], fill=self.linecolor, tags="line", width = self.line_width)
+                line = self.canvas.create_line(self.points[i], self.points[i+1], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)
                 self.lines.append(line)
                 # Bind hover events to the line
                 self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
                 self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))
 
             if len(self.points) > 2 and self.points[0] != self.points[-1]:
-                line = self.canvas.create_line(self.points[-1], self.points[0], fill=self.linecolor, tags="line", width = self.line_width)
+                line = self.canvas.create_line(self.points[-1], self.points[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)
                 self.lines.append(line)
                 self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
                 self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))
