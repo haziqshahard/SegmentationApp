@@ -12,9 +12,7 @@ class PolygonDrawer:
     -Lines automatically generate between each dot
     -The space fills with a choosable color
     -The whole polygon can be removed
-    #Current known bugs:
-    -Need to save the original point data, size, and everything then dynamically update it as new points are added even to the scaled version
-      #Features to be added
+    #Features to be added
     -Points/Line color/size needs to be adjustable
     """
     def __init__(self,root):
