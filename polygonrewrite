@@ -1,4 +1,7 @@
 import tkinter as tk 
+import customtkinter as ctk
+from CTkColorPicker import *
+import ctk_color_picker_alpha as ctkpa
 from PIL import Image, ImageTk, ImageDraw
 from tkinter import filedialog
 import numpy as np
@@ -12,15 +15,14 @@ class PolygonDrawer:
     -Lines automatically generate between each dot
     -The space fills with a choosable color
     -The whole polygon can be removed
+
     #Features to be added
-    -Points/Line color/size needs to be adjustable
+    -Move everything to customtkinter and make it look pretty RAAAAAAAAAH
     """
     def __init__(self,root):
         #Defining windows
         self.root = root
         self.root.title("Polygon Drawer")
-        
-
 
         pad_frame = tk.Frame(borderwidth = 0, background="bisque", width = 200,height=200)
         # pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
@@ -120,6 +122,11 @@ class PolygonDrawer:
         self.drawptbtwline = True
         self.context_menu = tk.Menu(root, tearoff=0)
         self.context_menu.add_command(label="Delete Polygon", command=self.delete_polygon)
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label="Dot Settings", command=self.dot_settings)
+        self.context_menu.add_command(label="Line Settings", command=self.line_settings)
+        self.context_menu.add_command(label="Polygon Color", command=self.polygon_colorset)
+
 
         #-------COLORS-------
         #Eventually these will be adjustable
@@ -128,7 +135,13 @@ class PolygonDrawer:
         self.linecolor = "#001C55"
         self.linehovercolor = "#55DDE0"
 
-        self.polygoncolor = (0,0,255,int(0.2*255))
+        self.polygoncolor = (0,0,255,int(0.1*255))
+
+    def hex_to_rgb(self,hex):
+        rgb = tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
+        comprgb = tuple(255 - component for component in rgb)
+        comphex = "#{:02X}{:02X}{:02X}".format(comprgb[0], comprgb[1], comprgb[2])
+        return comphex
 
     def on_resize(self,event):
          #Implemented from https://www.tutorialspoint.com/how-to-set-the-canvas-size-properly-in-tkinter
@@ -381,13 +394,119 @@ class PolygonDrawer:
                 self.lines.remove(line)
 
             self.redraw_polygon()
-   
+
+    def dot_settings(self):
+        """Expected settings to change for dots:
+        Size
+        Color
+        """
+        dotWindow = ctk.CTkToplevel(self.root)
+        dotWindow.title("Dot Settings")
+        dotWindow.resizable(False, False)
+        dotWindow.grid_columnconfigure(0, weight=1)
+        dotWindow.grid_rowconfigure(2, weight=1)
+        dotWindow.grab_set()
+
+        class sliders:
+            def __init__(self,parent,window,varstring, text,startend,framepos):
+                """Variables:
+                window - the window the slider will be found in
+                variable - the variable to update
+                text - the text to be displayed
+                startend - (start, end) values
+                framepos - row value
+                """
+                self.parent = parent
+                self.Frame = ctk.CTkFrame(window,corner_radius=10)
+                self.Frame.grid(row=framepos, column=0, padx=5, pady=5,sticky="ew")
+                self.variable = getattr(self.parent, varstring)
+                # Function to handle slider value change
+                def on_slider_change(value):
+                    label.configure(text=f"{text} {int(value):n}")
+                    slider_value = slider.get()
+                    setattr(self.parent, varstring, slider_value)
+                    self.parent.redraw_polygon()
+                    self.parent.redraw_points()
+
+                # Create a slider
+                slider = ctk.CTkSlider(self.Frame, from_=startend[0], to=startend[1], command=on_slider_change,number_of_steps=startend[1]-startend[0])
+                slider.set(self.variable)
+                slider.grid(row=1,column=0,padx=5,pady=0)
+
+                # Label to display slider value
+                label = ctk.CTkLabel(self.Frame, text=f"{text}{self.variable:n}")
+                label.grid(row=0,column=0,padx=5,pady=0)
+
+        def assign(e):
+            self.dotcolor = e
+            comp = self.hex_to_rgb(e[1:])
+            self.dothovercolor = comp
+            self.redraw_points()
+               
+        sliders(self,dotWindow, "dot_size", "Dot Size: ", (1,20), 0)
+        colorpicker = CTkColorPicker(dotWindow, command = lambda e: assign(e), orientation="horizontal",corner_radius=10)
+        colorpicker.grid(row=1,column=0,padx=5,pady=(0,5))
+        
+    def line_settings(self):
+        """Expected settings to change for line:
+        Size(Width)
+        Color
+        """
+        lineWindow = ctk.CTkToplevel(self.root)
+        lineWindow.title("Dot Settings")
+        lineWindow.resizable(False, False)
+        lineWindow.grid_columnconfigure(0, weight=1)
+        lineWindow.grid_rowconfigure(2, weight=1)
+        lineWindow.grab_set()
+        # lineWindow.after(100, lineWindow.lift) # Workaround for bug where main window takes focus
+
+        class sliders:
+            def __init__(self,parent,window,varstring, text,startend,framepos):
+                """Variables:
+                window - the window the slider will be found in
+                variable - the variable to update
+                text - the text to be displayed
+                startend - (start, end) values
+                framepos - row value
+                """
+                self.parent = parent
+                self.Frame = ctk.CTkFrame(window,corner_radius=10)
+                self.Frame.grid(row=framepos, column=0, padx=5, pady=5,sticky="ew")
+                self.variable = getattr(self.parent, varstring)
+                # Function to handle slider value change
+                def on_slider_change(value):
+                    label.configure(text=f"{text} {int(value):n}")
+                    slider_value = slider.get()
+                    setattr(self.parent, varstring, slider_value)
+                    self.parent.redraw_polygon()
+                    self.parent.redraw_points()
+
+                # Create a slider
+                slider = ctk.CTkSlider(self.Frame, from_=startend[0], to=startend[1], command=on_slider_change,number_of_steps=startend[1]-startend[0])
+                slider.set(self.variable)
+                slider.grid(row=1,column=0,padx=5,pady=0)
+
+                # Label to display slider value
+                label = ctk.CTkLabel(self.Frame, text=f"{text}{self.variable:n}")
+                label.grid(row=0,column=0,padx=5,pady=0)
+
+        def assign(e):
+            self.linecolor = e
+            comp = self.hex_to_rgb(e[1:])
+            self.linehovercolor = comp
+            self.redraw_polygon()
+               
+        sliders(self,lineWindow, "line_width", "Line Width: ", (1,20), 0)
+        colorpicker = CTkColorPicker(lineWindow, command = lambda e: assign(e), orientation="horizontal",corner_radius=10)
+        colorpicker.grid(row=1,column=0,padx=5,pady=(0,5))
+
     #----------POLYGON ACTIONS----------
     def show_context_menu(self, event):
         clicked_items = self.canvas.find_withtag("current")
         if not clicked_items or ("dot" not in self.canvas.gettags(clicked_items[0]) and 
                                  "line" not in self.canvas.gettags(clicked_items[0])):
             self.context_menu.post(event.x_root, event.y_root)
+
     
     def redraw_polygon(self):
         """This connects all dots present and draws the polygon contained within"""
@@ -459,6 +578,24 @@ class PolygonDrawer:
         #Maybe make this able to open the image/parent folder when clicked?
         self.label = tk.Label(master=self.savedialog, text=f"Image saved to {impath}")
         self.label.grid(row=0, column=0,padx=5, pady=5)
+
+    def polygon_colorset(self):
+        def rgba_to_hex(rgba):
+            r, g, b, a = rgba
+
+            # Ensure that each component is within the valid range (0-255)
+            r = max(0, min(255, r))
+            g = max(0, min(255, g))
+            b = max(0, min(255, b))
+            a = max(0, min(255, a))
+
+            # Convert each component to a two-digit hexadecimal value
+            return "#{:02X}{:02X}{:02X}{:02X}".format(r, g, b, a)
+        
+        pick_color = ctkpa.AskColor(initial_color=rgba_to_hex(self.polygoncolor))
+        color = pick_color.get()
+        self.polygoncolor = color
+        self.redraw_polygon()
 
     #----------HOVER EVENTS----------
     def on_hover_enter(self, event, dot):
