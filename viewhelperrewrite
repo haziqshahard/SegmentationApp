@@ -4,6 +4,9 @@ import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog
 from PIL import Image, ImageTk, ImageDraw
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
 
 class ViewHelper(ctk.CTkFrame):
     """
@@ -14,8 +17,9 @@ class ViewHelper(ctk.CTkFrame):
         Add a slider with polygon opacity adjustment
     Has to check live for segmentation being drawn, and also check for 
     """
-    def __init__(self, root, points = 0):
+    def __init__(self, root, points = []):
         super().__init__(root)
+        self.configure(fg_color="transparent")
         self.root = root
         self.grid(sticky="nsew")
         ctk.set_appearance_mode("dark")
@@ -58,7 +62,8 @@ class ViewHelper(ctk.CTkFrame):
 
     def update(self,points):
         self.points = points
-        self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
+        if len(self.points) != 0:
+            self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
 
     def load_images(self):
         """Load time folders and slice files."""
@@ -188,7 +193,8 @@ class ViewHelper(ctk.CTkFrame):
         self.item_scale_factor = new_width / self.last_width
         self.last_width = new_width
 
-        self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
+        if len(self.points) != 0:
+            self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
         self.line_width = self.item_scale_factor
         self.delete_polygon()
         self.render_polygon()
@@ -210,6 +216,7 @@ class ViewHelper(ctk.CTkFrame):
             print("Other key pressed")  # Debugging line
 
         self.updateimage(self.slice_index, self.time_index)
+        self.render_polygon()
 
     def handle_right_click(self,event):
         clicked_items = self.canvas.find_withtag("current")
@@ -218,19 +225,30 @@ class ViewHelper(ctk.CTkFrame):
             self.context_menu.post(event.x_root, event.y_root)
 
     def toggle_polygon(self):
+        #check if the segmented mask even exists
         if self.show_polygon:
             self.show_polygon = False
             # print("NOT Showing polygon")
         else:
             self.show_polygon = True
+            #NOW HAVE TO SET UP PASSING THE PATH TO THEN RENDER THE RELEVANT POLYGON
             # print("Showing polygon")
-        self.render_polygon() 
+        self.render_polygon()
     
     def render_polygon(self):
         if self.show_polygon:
+            # print(f"Current time:{self.time_index}, Current Slice:{self.slice_index}")
+            path = self.base_path + "/time{time:03}/segmented/Segmented Slice{slice:03}.png".format(time=self.time_index+1, slice=self.slice_index+1)
+            if os.path.isfile(path):
+                self.masktopoints(path)
+            else:
+                print(f"This file at {path} does not have a segmentation") 
+                self.show_polygon = False
+            self.delete_polygon()
             if len(self.points) == 0:
                 #Needs to open up a dialog box
                 print("No coordinates found")
+                self.show_polygon = False
             else:
                  # Draw lines between points
                 if len(self.scaledpoints) > 1:
@@ -290,22 +308,38 @@ class ViewHelper(ctk.CTkFrame):
 
         #Render polygon if show polygon is true
         self.render_polygon()
+    
+    def masktopoints(self,maskpath):
+        # Load the PNG image as a grayscale image (0 means grayscale mode)
+        binary_mask = cv2.imread(maskpath, cv2.IMREAD_GRAYSCALE)
+        # Assuming 'binary_mask' is your binary mask as a numpy array
+        # Find contours in the binary mask
+        contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        # Get the first contour (assuming you only have one object)
+        boundary_points = contours[0]  # (N, 1, 2) array representing x, y coordinates
+
+        numpoints = 30
+        step = len(boundary_points)//numpoints
+        boundary_points = boundary_points[::step]
+        self.points = [tuple(arr.flatten()) for arr, in boundary_points]
+        if len(self.points) != 0:
+            self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
 
 # Create the main window
 root = ctk.CTk()
 root.title("Image Scroller")
 
-# Create and pack the ImageScroller frame
-points =  [(141.0, 300.0), (112.0, 255.0), (98.0, 218.0), (97.0, 174.0), (108.0, 137.0), (123.0, 107.0), 
-                       (149.0, 69.0), (182.0, 50.0), (222.0, 47.0), (235.0, 96.0), (235.0, 126.0), (237.0, 191.0), 
-                       (238.0, 243.0), (242.0, 293.0), (218.0, 293.0), (207.0, 247.0), (206.0, 187.0), (206.0, 158.0), 
-                       (192.0, 93.0), (156.0, 113.0), (142.0, 148.0), (141.0, 191.0), (148.0, 230.0), (160.0, 271.0), (170.0, 293.0)]
+# # Create and pack the ImageScroller frame
+# points =  [(141.0, 300.0), (112.0, 255.0), (98.0, 218.0), (97.0, 174.0), (108.0, 137.0), (123.0, 107.0), 
+#                        (149.0, 69.0), (182.0, 50.0), (222.0, 47.0), (235.0, 96.0), (235.0, 126.0), (237.0, 191.0), 
+#                        (238.0, 243.0), (242.0, 293.0), (218.0, 293.0), (207.0, 247.0), (206.0, 187.0), (206.0, 158.0), 
+#                        (192.0, 93.0), (156.0, 113.0), (142.0, 148.0), (141.0, 191.0), (148.0, 230.0), (160.0, 271.0), (170.0, 293.0)]
 
-morepoints = [(141.0, 300.0), (112.0, 255.0), (98.0, 218.0), (97.0, 174.0), (108.0, 137.0), (123.0, 107.0), 
-                       (149.0, 69.0), (182.0, 50.0), (222.0, 47.0), (235.0, 96.0), (235.0, 126.0)]
+# morepoints = [(141.0, 300.0), (112.0, 255.0), (98.0, 218.0), (97.0, 174.0), (108.0, 137.0), (123.0, 107.0), 
+#                        (149.0, 69.0), (182.0, 50.0), (222.0, 47.0), (235.0, 96.0), (235.0, 126.0)]
 
-imagescroller = ViewHelper(root=root,points=points)
-imagescroller.configure(fg_color="transparent")
+imagescroller = ViewHelper(root=root)
 # imagescroller.update(morepoints)
 # image_scroller.pack(fill="both", expand=True)
 

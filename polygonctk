@@ -23,6 +23,7 @@ class PolygonDrawer(ctk.CTkFrame):
     """
     def __init__(self,root):
         #Defining windows
+        super().__init__(root)
         self.root = root
         self.root.title("Polygon Drawer")
         ctk.set_appearance_mode("dark")
