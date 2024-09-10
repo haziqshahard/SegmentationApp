@@ -4,7 +4,9 @@ Folder selection to pick the current case to segment
 Segmentor selection to pick the Pytorch model to autosegment to assist
 Polygon-based segmentor tool to draw the segmentation 
     Show the previous case to the left with a live preview of the whole segmentation on the left with an opacity slider
-    Viewhelper window as well - need 3 windows
+    Viewhelper window as well - need 3 windows (CAN DO IT ON 2 SEPARATE TABS)
 Ability to edit a specific case
 Make each window adjustable sizes
     Have to be able to save the window size to a settings.txt file
+
+Tab somewhere to put the segmentation model details?
