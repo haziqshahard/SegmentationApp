@@ -1,11 +1,12 @@
 import os
 import re
 import tkinter as tk
+import customtkinter as ctk
 from tkinter import ttk
 from tkinter import filedialog
 from PIL import Image, ImageTk
 
-class ImageScroller(tk.Frame):
+class ImageScroller(ctk.CTkFrame):
     """
     Features to add:
     has to check for the existence of a "segmented" folder within the current directory
@@ -40,10 +41,10 @@ class ImageScroller(tk.Frame):
 
     def create_widgets(self):
         """Create and place the UI elements."""
-        self.label_image = ttk.Label(self)
+        self.label_image = ctk.CTkLabel(self, text="")
         self.label_image.grid(row=0, column=0, padx=10, pady=10)
 
-        self.label_status = ttk.Label(self, text="")
+        self.label_status = ctk.CTkLabel(self, text="")
         self.label_status.grid(row=1, column=0, padx=10, pady=10)
 
     def load_images(self):
@@ -68,16 +69,16 @@ class ImageScroller(tk.Frame):
 
         # Convert to the correct format for the operating system
         image_path = image_path.replace('\\', '/')
-        print(f"Loading image: {image_path}")  # Debugging line
+        # print(f"Loading image: {image_path}")  # Debugging line
 
         try:
             img = Image.open(image_path)
             img = img.resize((400, 400))  # Resize the image for display
             img_tk = ImageTk.PhotoImage(img)
             
-            self.label_image.config(image=img_tk)
+            self.label_image.configure(image=img_tk)
             self.label_image.image = img_tk  # Keep a reference to avoid garbage collection
-            self.label_status.config(text=f"Time: {self.time_index+1}/{len(self.time_folders)}, Slice: {self.slice_index+1}/{len(self.slice_files[0])}")
+            self.label_status.configure(text=f"Time: {self.time_index+1}/{len(self.time_folders)}, Slice: {self.slice_index+1}/{len(self.slice_files[0])}")
         except Exception as e:
             print(f"Error loading image: {e}")  # Debugging line
 
@@ -107,7 +108,7 @@ class ImageScroller(tk.Frame):
         self.bind("<Down>", self.on_key_press)
 
 # Create the main window
-root = tk.Tk()
+root = ctk.CTk()
 root.title("Image Scroller")
 
 # Create and pack the ImageScroller frame
