@@ -9,7 +9,7 @@ import numpy as np
 import os
 from scipy.interpolate import splprep, splev
 
-class PolygonDrawer:
+class PolygonDrawer(ctk.CTkFrame):
     """
     #Window that enables the user to draw on the image required
     #Features:
