@@ -1,8 +1,11 @@
 NEW GOAL:
+
+FIRST ORDER OF BUSINESS IS TO MAKE A SAVE FILE WITH ALL THE DATA
+
 The polygon drawer needs to have a "fix" mode - add to context menu
     Must make it obvious, maybe change the theme?
     Once in fix mode, only brings up segmentations if they are available
-    otherwise, doesn't allow you to place any buttons
+    otherwise, doesn't allow you to place any points
 Need to be able to bring the polygon from the previous slice and draw it as a polygon 
     Has to have a button that says "Bring previous" with a confirmation window
 

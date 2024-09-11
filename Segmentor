@@ -29,7 +29,7 @@ class PolygonDrawer(ctk.CTkFrame):
 
         pad_frame = ctk.CTkFrame(master=self.root, width = 200,height=200)
         # pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
-        pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        pad_frame.grid(row=0, column=0,columnspan=2, sticky="nsew", padx=10, pady=(10,0))
         #Loading image
         #--To be changed to a button next time--
         #--Must be dynamic, able to change the image whenever
@@ -81,13 +81,21 @@ class PolygonDrawer(ctk.CTkFrame):
 
         #Save image button
         self.savedialog = ctk.CTkFrame(master=self.root)
-        self.savedialog.grid(row=1, column=0, padx=5, pady=5, sticky="ns")
+        self.savedialog.grid(row=1, column=0,columnspan=2, padx=5, pady=(5,0), sticky="ns")
 
         self.fontsize = 15
         self.label = ctk.CTkLabel(master=self.savedialog, text="Apply smoothing and save image",font=('TkDefaultFont',self.fontsize))
-        btn = ctk.CTkButton(master=self.savedialog, text="Save Image", command=self.save_mask, font=('TkDefaultFont', self.fontsize))
+        self.btn = ctk.CTkButton(master=self.savedialog, text="Save Image", command=self.save_mask, font=('TkDefaultFont', self.fontsize))
         self.label.grid(row=0, column=0,padx=5, pady=2)
-        btn.grid(row=1, column=0, padx=5, pady=2)
+        self.btn.grid(row=1, column=0, padx=5, pady=2, sticky="nsew")
+
+        self.current_mode = "Draw"
+
+        #Save image button
+        self.currentmodedialog = ctk.CTkFrame(master=self.root)
+        self.currentmodedialog.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        self.modelabel = ctk.CTkLabel(master=self.currentmodedialog, text=f"{self.current_mode} Mode",font=('TkDefaultFont',self.fontsize))
+        self.modelabel.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")    
 
         #Display image on canvas
         self.canvimg=self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items
@@ -127,13 +135,17 @@ class PolygonDrawer(ctk.CTkFrame):
         self.lines = []
         self.polygon = None
         self.drawptbtwline = True
-        
+
+
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
         self.context_menu.add_command(label="Delete Polygon", command=self.delete_polygon)
         self.context_menu.add_separator()
         self.context_menu.add_command(label="Dot Settings", command=self.dot_settings)
         self.context_menu.add_command(label="Line Settings", command=self.line_settings)
         self.context_menu.add_command(label="Polygon Color", command=self.polygon_colorset)
+        self.context_menu.add_separator()
+        self.fixcommand = self.context_menu.add_command(label="Toggle Fix/Draw Mode", command=self.fix_mode)
+        self.context_menu.add_command(label="Bring Previous", command = self.previous_poly)
 
         #-------COLORS------- 
         #Eventually these will be adjustable
@@ -612,7 +624,6 @@ class PolygonDrawer(ctk.CTkFrame):
         # = ctk.CTkLabel(master=self.savedialog, text=f"Image saved to {impath}", font=('TkDefaultFont',self.fontsize))
         self.label.grid(row=0, column=0,padx=5, pady=5)
 
-
     def polygon_colorset(self):
         def rgba_to_hex(rgba):
             r, g, b, a = rgba
@@ -630,6 +641,27 @@ class PolygonDrawer(ctk.CTkFrame):
         color = pick_color.get()
         self.polygoncolor = color
         self.redraw_polygon()
+
+    def fix_mode(self):
+        if self.current_mode == "Draw":
+            self.current_mode = "Fix"
+            self.modelabel.configure(text=f"{self.current_mode} Mode",font=('TkDefaultFont',self.fontsize))
+            self.btn.configure(text="Save Fixed Mask")
+            #If the current mode is fix, it has to
+            #Save the current polygon data somewhere if it is present, 
+            #Check if the file that the folder is within has a "segmented folder" and a corresponding mask
+            #If it does, render that mask using the masktopoints and display it as a polygon
+            #Then allow the user to save the fixed mask and move on to the next image
+            #Have to make it so that the drawer shows the current time and slice
+            #User has to be able to move to the next time and slice and maintain the previous information
+        else:
+            self.current_mode = "Draw"
+            self.modelabel.configure(text=f"{self.current_mode} Mode",font=('TkDefaultFont',self.fontsize))           
+            self.btn.configure(text="Save New Mask")
+        return
+    
+    def previous_poly(self):
+        return
 
     #----------HOVER EVENTS----------
     def on_hover_enter(self, event, dot):
