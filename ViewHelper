@@ -7,6 +7,7 @@ from PIL import Image, ImageTk, ImageDraw
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from CTkMessagebox import CTkMessagebox
 
 class ViewHelper(ctk.CTkFrame):
     """
@@ -16,6 +17,9 @@ class ViewHelper(ctk.CTkFrame):
     the opacity has to be adjustable
         Add a slider with polygon opacity adjustment
     Has to check live for segmentation being drawn, and also check for 
+    ISSUES:
+    render_polygon has to show the polygon if it exists, and not show it if it doesnt
+    shouldn't need constant toggling in order to show the thing
     """
     def __init__(self, root, points = []):
         super().__init__(root)
@@ -32,7 +36,7 @@ class ViewHelper(ctk.CTkFrame):
         self.original_height = 0
         self.aspect_ratio = 0
         self.last_width = 0
-        self.font_size=30
+        self.font_size=20
         self.show_polygon = False
 
         self.points = points
@@ -41,7 +45,7 @@ class ViewHelper(ctk.CTkFrame):
         self.lines=[]
         self.polytag = None
 
-        self.line_width = 1
+        self.line_width = 3
         self.linecolor = "#001C55"
         self.linehovercolor = "#55DDE0"
         self.polygoncolor = (0,0,255,int(0.1*255))
@@ -54,8 +58,8 @@ class ViewHelper(ctk.CTkFrame):
         self.load_image(self.slice_index, self.time_index)
        
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
-        self.context_menu.add_command(label="Toggle Polygon", command=self.toggle_polygon)
-
+        self.context_menu.add_command(label="Toggle Drawn Polygon", command=self.toggle_polygon)
+        # self.context_menu.add_command(label = "Toggle Current Polygon")
         # Bind arrow keys
         self.bind_keys()
         self.root.focus_set()
@@ -73,11 +77,11 @@ class ViewHelper(ctk.CTkFrame):
         # Get all time folders matching the format
         self.time_folders = sorted([d for d in os.listdir(self.base_path) 
                                     if os.path.isdir(os.path.join(self.base_path, d)) and time_pattern.match(d)])
-        print(f"Time folders found: {len(self.time_folders)}")  # Debugging line
+        # print(f"Time folders found: {len(self.time_folders)}")  # Debugging line
 
         # Get all slice files for each time folder
         self.slice_files = [sorted([f for f in os.listdir(os.path.join(self.base_path, t)) if os.path.isfile(os.path.join(self.base_path, t, f))]) for t in self.time_folders]
-        print(f"Slice files found: {len(self.slice_files[0])}")  # Debugging line
+        # print(f"Slice files found: {len(self.slice_files[0])}")  # Debugging line
 
     def load_image(self, slice_index, time_index):
         """Load and display the image based on current slice and time index."""
@@ -195,7 +199,7 @@ class ViewHelper(ctk.CTkFrame):
 
         if len(self.points) != 0:
             self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
-        self.line_width = self.item_scale_factor
+        self.line_width = self.line_width*self.item_scale_factor
         self.delete_polygon()
         self.render_polygon()
 
@@ -212,10 +216,14 @@ class ViewHelper(ctk.CTkFrame):
             self.slice_index = (self.slice_index - 1) % len(self.slice_files[self.time_index])
         elif event.keysym == "Up":
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
-        else:
-            print("Other key pressed")  # Debugging line
 
         self.updateimage(self.slice_index, self.time_index)
+        path = self.base_path + "/time{time:03}/segmented/Segmented Slice{slice:03}.png".format(time=self.time_index+1, slice=self.slice_index+1)
+        if os.path.isfile(path):
+            self.show_polygon=True
+            self.masktopoints(path)
+        else:
+            self.show_polygon = False
         self.render_polygon()
 
     def handle_right_click(self,event):
@@ -238,16 +246,9 @@ class ViewHelper(ctk.CTkFrame):
     def render_polygon(self):
         if self.show_polygon:
             # print(f"Current time:{self.time_index}, Current Slice:{self.slice_index}")
-            path = self.base_path + "/time{time:03}/segmented/Segmented Slice{slice:03}.png".format(time=self.time_index+1, slice=self.slice_index+1)
-            if os.path.isfile(path):
-                self.masktopoints(path)
-            else:
-                print(f"This file at {path} does not have a segmentation") 
-                self.show_polygon = False
             self.delete_polygon()
             if len(self.points) == 0:
                 #Needs to open up a dialog box
-                print("No coordinates found")
                 self.show_polygon = False
             else:
                  # Draw lines between points
@@ -273,8 +274,7 @@ class ViewHelper(ctk.CTkFrame):
         for line in self.canvas.find_withtag("line"):
                     self.canvas.delete(line)
         self.canvas.delete(self.polytag)    
-        
-                
+               
     def PILdrawpoly(self):
         overlay = Image.new('RGBA', (self.current_width, self.current_height), (255,255,255,0))
         draw = ImageDraw.Draw(overlay)
@@ -329,15 +329,6 @@ class ViewHelper(ctk.CTkFrame):
 # Create the main window
 root = ctk.CTk()
 root.title("Image Scroller")
-
-# # Create and pack the ImageScroller frame
-# points =  [(141.0, 300.0), (112.0, 255.0), (98.0, 218.0), (97.0, 174.0), (108.0, 137.0), (123.0, 107.0), 
-#                        (149.0, 69.0), (182.0, 50.0), (222.0, 47.0), (235.0, 96.0), (235.0, 126.0), (237.0, 191.0), 
-#                        (238.0, 243.0), (242.0, 293.0), (218.0, 293.0), (207.0, 247.0), (206.0, 187.0), (206.0, 158.0), 
-#                        (192.0, 93.0), (156.0, 113.0), (142.0, 148.0), (141.0, 191.0), (148.0, 230.0), (160.0, 271.0), (170.0, 293.0)]
-
-# morepoints = [(141.0, 300.0), (112.0, 255.0), (98.0, 218.0), (97.0, 174.0), (108.0, 137.0), (123.0, 107.0), 
-#                        (149.0, 69.0), (182.0, 50.0), (222.0, 47.0), (235.0, 96.0), (235.0, 126.0)]
 
 imagescroller = ViewHelper(root=root)
 # imagescroller.update(morepoints)

@@ -17,9 +17,7 @@ class PolygonDrawer(ctk.CTkFrame):
     -Lines automatically generate between each dot
     -The space fills with a choosable color
     -The whole polygon can be removed
-
     #Features to be added
-    -NEED TO OPTIMISE THE DRAGGING FOR THE WHOLE POLYGON AS VERY CHOPPY RN
     """
     def __init__(self,root):
         #Defining windows
