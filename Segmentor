@@ -17,20 +17,19 @@ class PolygonDrawer(ctk.CTkFrame):
     -Lines automatically generate between each dot
     -The space fills with a choosable color
     -The whole polygon can be removed
-
     #Features to be added
-    -NEED TO OPTIMISE THE DRAGGING FOR THE WHOLE POLYGON AS VERY CHOPPY RN
     """
     def __init__(self,root):
         #Defining windows
+        super().__init__(root)
         self.root = root
         self.root.title("Polygon Drawer")
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("dark-blue")  # Other themes: "blue", "green"
+        ctk.set_default_color_theme("blue")  # Other themes: "blue", "green"
 
         pad_frame = ctk.CTkFrame(master=self.root, width = 200,height=200)
         # pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
-        pad_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         #Loading image
         #--To be changed to a button next time--
         #--Must be dynamic, able to change the image whenever
@@ -46,7 +45,7 @@ class PolygonDrawer(ctk.CTkFrame):
 
         self.aspect_ratio = self.original_width/self.original_height
         #Create Canvas
-        self.canvas = tk.Canvas(root, width=self.pilimage.width, height=self.pilimage.height,highlightbackground="blue", highlightthickness=1,scrollregion=(0, 0, 0, 0))
+        self.canvas = tk.Canvas(root, width=self.pilimage.width, height=self.pilimage.height,borderwidth=0, highlightbackground="#000000",scrollregion=(0, 0, 0, 0))
         
         def set_aspect(content_frame, pad_frame, aspect_ratio):
         # Taken from user Bryan Oakley : https://stackoverflow.com/a/16548607
@@ -608,6 +607,7 @@ class PolygonDrawer(ctk.CTkFrame):
         mask.save("mask.png")
 
         #Maybe make this able to open the image/parent folder when clicked?
+        print(self.points)
         self.label.configure(text=f"Image saved to {impath}") 
         # = ctk.CTkLabel(master=self.savedialog, text=f"Image saved to {impath}", font=('TkDefaultFont',self.fontsize))
         self.label.grid(row=0, column=0,padx=5, pady=5)

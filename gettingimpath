@@ -1,0 +1,7 @@
+from tkinter import filedialog
+base_path = filedialog.askdirectory(title="Select the base folder")
+time_index=1
+slice_index=1
+
+path = base_path + "/time{time:03}/segmented/Segmented Slice{slice:03}".format(time=time_index, slice=slice_index)
+print(path)
