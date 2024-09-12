@@ -208,13 +208,13 @@ class ViewHelper(ctk.CTkFrame):
         """Handle key press events."""
         # print(f"Key pressed: {event.keysym}")  # Debugging line
 
-        if event.keysym == "Right":
+        if event.keysym == "Up":
             self.time_index = (self.time_index + 1) % len(self.time_folders)
-        elif event.keysym == "Left":
-            self.time_index = (self.time_index - 1) % len(self.time_folders)
         elif event.keysym == "Down":
+            self.time_index = (self.time_index - 1) % len(self.time_folders)
+        elif event.keysym == "Left":
             self.slice_index = (self.slice_index - 1) % len(self.slice_files[self.time_index])
-        elif event.keysym == "Up":
+        elif event.keysym == "Right":
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
 
         self.updateimage(self.slice_index, self.time_index)

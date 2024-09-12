@@ -24,15 +24,6 @@ class PolygonDrawer(ctk.CTkFrame):
     -TWO MODES:
         Draw mode: Can bring forth previous mask, but does NOT save the current one when switching modes
         Fix (CHANGE TO EDIT) mode: Checks to see the existence of segmented, and allows for redrawing and then saving.
-    #Features to be added:
-    # Have to be able to move between slices (a and d keys)
-    #Put a window under the time/slice shower?
-    # If want to swap time, pull up dialog window to choose the time
-    # If in drawing mode, any points drawn must be saved to a drawmode array of structure [[time, points],...]
-    # If no points on the current slice, don't save.
-    # When key pressed, checks in array if the current time matches any of the times in the array
-    # If it does, redraw the points and the polygon for editing
-    # And update the image, and the label. 
     """
     def __init__(self,root):
         #Defining windows
@@ -56,6 +47,9 @@ class PolygonDrawer(ctk.CTkFrame):
         self.image_path = filedialog.askopenfilename(title="Select an image")
         self.current_slice = int(os.path.basename(self.image_path)[5:8])
         self.current_time = int(os.path.basename(self.image_path)[12:15])
+
+        self.slice_index = self.current_slice - 1
+        self.time_index = self.current_time -1
         
         self.base_path = "/".join(self.image_path.split("/")[:-2])
         self.pilimage = Image.open(self.image_path)
@@ -66,6 +60,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.original_width = self.pilimage.width
         self.original_height = self.pilimage.height
         self.points = []
+        self.switchpoints = []
 
         self.aspect_ratio = self.original_width/self.original_height
         #Create Canvas
@@ -150,7 +145,13 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.bind("<B1-Motion>", self.do_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
         self.canvas.bind("<Button-3>", self.handle_right_click)
-        
+        self.root.bind("<a>", self.on_key_press)
+        self.root.bind("<d>", self.on_key_press)
+        self.root.bind("<A>", self.on_key_press)
+        self.root.bind("<D>", self.on_key_press)
+
+        self.root.focus_set()
+
         #CURRENT SCALE INFORMATION
         self.current_width = self.canvas.winfo_width()
         self.current_height = self.canvas.winfo_height()
@@ -189,7 +190,6 @@ class PolygonDrawer(ctk.CTkFrame):
         self.context_menu.add_command(label="Toggle Fix/Draw Mode", command=self.toggle_mode)
         self.context_menu.add_command(label="Refresh Current Fix Segmentation",command=self.fix_mode)
         self.context_menu.add_command(label="Bring Previous", command = self.previous_poly)
-        self.context_menu.add_command(label="Save to Txt", command=self.save_settings)
 
         #-------COLORS------- 
         self.dotcolor = "#E2856E"
@@ -359,6 +359,79 @@ class PolygonDrawer(ctk.CTkFrame):
                 self.delete_point(event, clicked_items[0])
         else:
             self.show_context_menu(event)
+
+    def on_key_press(self,event):
+        self.updateswitchpoints()
+
+        if event.keysym == "a" or event.keysym =="A":
+            self.slice_index = (self.slice_index - 1) % len(self.slice_files[self.time_index])
+            # print("A Clicked")
+        if event.keysym == "d" or event.keysym =="D":
+            self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
+            # print("D Clicked")
+
+        # self.delete_polygon()
+        self.checkswitchpoints()
+        self.updateimage(self.slice_index, self.time_index)
+
+
+    def updateimage(self, slice_index, time_index):
+        self.current_slice = slice_index +1
+        self.current_time = time_index+1
+        time_folder = self.time_folders[time_index]
+        slice_file = self.slice_files[time_index][slice_index]
+        image_path = os.path.join(self.base_path, time_folder, slice_file)
+
+        # Convert to the correct format for the operating system
+        image_path = image_path.replace('\\', '/')
+        try:
+            self.pilimage = Image.open(image_path) # Resize the image for display
+            self.photo = ImageTk.PhotoImage(self.pilimage)
+        except OSError:
+            CTkMessagebox(message=f"Image f{image_path} not loaded, likely OneDrive Issue.",icon="cancel")
+            
+        # Calculate new width and height while maintaining aspect ratio
+        new_width = int(self.original_width * self.scale_factor)
+        new_height = int(self.original_height * self.scale_factor)
+
+        #Updating canvas with the current scaled image
+        scaled_image = self.pilimage.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        self.scaled_photo = ImageTk.PhotoImage(scaled_image)
+        #Update canvas and the image size
+        self.canvas.itemconfig(self.canvimg, image=self.scaled_photo)
+
+        #Update label
+        self.filelabel.configure(text=f"Slice:{self.current_slice}/{len(self.slice_files[0])}|Time:{self.current_time}/{len(self.time_folders)}")    
+            
+        self.fix_mode()
+
+    def updateswitchpoints(self):
+        exists = any(entry[0] == self.slice_index for entry in self.switchpoints)
+        if self.current_mode == "Draw":
+            if self.points != []:
+                if exists:
+                    index = [i for i, entry in enumerate(self.switchpoints) if entry[0] == self.slice_index][0]                
+                    self.switchpoints[index][1] = self.points
+                    # print(f"updating switch points for {self.slice_index}")
+                else:
+                    # print(f"adding switch points for {self.slice_index}: {self.points}")
+                    self.switchpoints.append([self.slice_index, self.points])
+                self.points = []
+                self.scalepoints()
+                self.redraw_polygon()
+                self.redraw_points()
+            else:
+                return
+
+    def checkswitchpoints(self):
+        slicepointsexists = any(entry[0] == self.slice_index for entry in self.switchpoints)
+        if slicepointsexists and self.switchpoints != []:
+            index = [i for i, entry in enumerate(self.switchpoints) if entry[0] == self.slice_index][0]
+            # print(self.switchpoints)
+            self.points = self.switchpoints[index][1]
+            self.scalepoints()
+            self.redraw_polygon()
+            self.redraw_points()
 
     #----------POINT ACTIONS----------
     def draw_point(self,x,y):
@@ -621,6 +694,7 @@ class PolygonDrawer(ctk.CTkFrame):
             self.canvas.delete(self.polygon)    
         for dot in self.canvas.find_withtag("dot"):
             self.canvas.delete(dot)
+       
         self.points.clear()
         self.dots.clear()
         self.lines.clear()
