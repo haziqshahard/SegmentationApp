@@ -36,18 +36,24 @@ class CaseSelector(ctk.CTkFrame):
         self.scrollframe = ctk.CTkScrollableFrame(master=mainframe, label_text="Case Selector", label_anchor="w", label_font=(self.font,self.fontsize*self.scale_factor))
         self.scrollframe.grid(row=0, column=0,sticky="nsew")
 
-        self.preloadcases()
+        self.buttons = []
 
         btn = ctk.CTkButton(master=mainframe,text="Select Case", command=self.selectcase, font=(self.font,self.fontsize*self.scale_factor))
+        self.fg_color = getattr(btn, "_fg_color")
+        self.hover_color = getattr(btn, "_hover_color")
         btn.grid(row=1, column=0, padx=10, pady=10, sticky="e")
+
+        self.preloadcases()
 
     def selectcase(self):
         self.base_path = tk.filedialog.askdirectory(title="Select the Case")
         if self.base_path in self.paths:
             CTkMessagebox(message="This Case is already present", icon="cancel")
         else:
-            self.paths += [str(self.base_path)]
+            self.paths += [[str(self.base_path),"notcompleted"]]
+            # print(self.paths)
             self.createbutton(self.base_path)
+            self.renderbuttons()
         return
     
     def savecases(self):
@@ -57,13 +63,13 @@ class CaseSelector(ctk.CTkFrame):
         updated = False
         for i, line in enumerate(lines):
             if line.startswith("paths="):
-                lines[i] = f"paths={self.paths}\n"  # Update the 'paths' value
+                lines[i] = f"paths={self.paths}\n" # Update the 'paths' value
                 updated = True
                 break
 
         # Step 3: If 'paths' doesn't exist, add it
         if not updated:
-            lines.append(f"paths={self.paths}\n")
+            lines.append(f"paths={[self.paths]}\n")
 
         # Step 4: Write the updated content back to the file
         with open('save.txt', 'w') as file:
@@ -82,24 +88,70 @@ class CaseSelector(ctk.CTkFrame):
         if self.settings.get('paths') is not None:
             self.paths = ast.literal_eval(self.settings.get('paths'))
             for path in self.paths:
-                self.createbutton(path)
-        return
+                self.createbutton(path[0])
+            self.renderbuttons()
+        for i in range(0,len(self.paths)):
+            self.markcompleted(i)
+    
+    def renderbuttons(self):
+        for btn in self.buttons:
+            btn.pack(padx=5,pady=5, fill=tk.BOTH, expand=True)
+
+    def find_index(self,nested_list, item):
+        return [(outer_index, inner_list.index(item)) 
+                for outer_index, inner_list in enumerate(nested_list) 
+                if item in inner_list][0][0]
 
     def createbutton(self, path):
         case = os.path.basename(os.path.normpath(path))
+
+        pathidx = self.find_index(self.paths,path)
+        # print(self.paths)
+        # print(pathidx)    
+        # pathidx = self.paths.index(path)
         btn = ctk.CTkButton(master=self.scrollframe, text=f"{case}", command=self.loadcase(),font=(self.font,self.fontsize*self.scale_factor),anchor="center")
-        btn.pack(padx=5,pady=5, fill=tk.BOTH, expand=True)
-        btn.bind("<Button-3>", self.handle_right_click)
+        btn.bind("<Button-3>", command=lambda event, pathidx=pathidx: self.handle_right_click(event, pathidx = pathidx))
+        self.buttons.append(btn)
+    
+    def handle_right_click(self, event, pathidx):
+        # Create a context menu
+        context_menu = tk.Menu(self.root, tearoff=0)
+        # Add 'Delete Case' option to the context menu
+        context_menu.add_command(label="Delete Case", command=lambda: self.delete_button(pathidx))
+        context_menu.add_command(label="Mark Completed",command = lambda: self.switchcompleted(pathidx))
+        # Show the menu at the position of the right-click
+        context_menu.tk_popup(event.x_root, event.y_root)
 
-    def handle_right_click(self, event):
-        #Pull up context menu to be able to delete the case
+    def delete_button(self, pathidx):
+        # Destroy the button that was right-clicked
+        self.paths.pop(pathidx)
+        button = self.buttons.pop(pathidx)
+        button.destroy()
+        self.renderbuttons()
+        self.scrollframe.update_idletasks()
 
-        print("button pressed")
-        return
+    def switchcompleted(self, pathidx):
+        button = self.buttons[pathidx]
+        # fg_color = getattr(button, "_fg_color")
+        if self.paths[pathidx][1] == "completed":
+            button.configure(fg_color=self.fg_color[1], hover_color = self.hover_color[1])
+            self.paths[pathidx][1] = "notcompleted"
+        else:
+            button.configure(fg_color="green4", hover_color="darkolivegreen4")
+            # print(self.paths[pathidx])
+            self.paths[pathidx][1] = "completed"
+
+    def markcompleted(self, pathidx):
+        button = self.buttons[pathidx]
+        # fg_color = getattr(button, "_fg_color")
+        # print(self.paths)
+        if self.paths[pathidx][1] == "completed":
+            button.configure(fg_color="green4", hover_color="darkolivegreen4")
+        else:
+            button.configure(fg_color=self.fg_color[1], hover_color = self.hover_color[1])
 
     def loadcase(self):
         return
-
 
 if __name__ == "__main__":
     root=ctk.CTk()
