@@ -799,18 +799,48 @@ class PolygonDrawer(ctk.CTkFrame):
         #     self.scalepoints()
         #     self.redraw_points()
 
+    def update_or_write_paths(self,key, value,file_path='save.txt'):
+        # Step 1: Read the file
+        try:
+            with open(file_path, 'r') as file:
+                lines = file.readlines()
+        except FileNotFoundError:
+            lines = []  # If file doesn't exist, start with an empty list
+
+        # Step 2: Check if the key exists and update it
+        updated = False
+        for i, line in enumerate(lines):
+            if line.startswith(key):  # Check if the key exists
+                lines[i] = f"{key}{value}\n"  # Update the value
+                updated = True
+                break
+
+        # Step 3: If the key doesn't exist, add it (ensure a newline at the end)
+        if not updated:
+            lines.append(f"{key}{value}\n")
+
+        # Step 4: Write the updated content back to the file
+        with open(file_path, 'w') as file:
+            file.writelines(lines)
+
     def save_settings(self,delete="keep"):
-        with open("save.txt",'w') as f:
-            f.write("points="+str(self.points)+"\n")
-            f.write("dotcolor="+str(self.dotcolor)+"\n")
-            f.write("dothovercolor="+str(self.dothovercolor)+"\n")
-            f.write("linecolor="+str(self.linecolor)+"\n")
-            f.write("linehovercolor="+str(self.linehovercolor)+"\n")
-            f.write("polygoncolor="+str(self.polygoncolor)+"\n")
-            f.write("dotsize="+str(int(self.dot_size))+"\n")
-            f.write("linewidth="+str(int(self.line_width))+"\n")
-            f.write("smoothing="+str(int(self.smoothing))+"\n")
-            f.write("numpoints="+str(int(self.numpoints))+"\n")
+        settings = {
+        "points=": self.points,
+        "dotcolor=": self.dotcolor,
+        "dothovercolor=": self.dothovercolor,
+        "linecolor=": self.linecolor,
+        "linehovercolor=": self.linehovercolor,
+        "polygoncolor=": self.polygoncolor,
+        "dotsize=": int(self.dot_size),
+        "linewidth=": int(self.line_width),
+        "smoothing=": int(self.smoothing),
+        "numpoints=": int(self.numpoints)
+        }
+
+            # Update or write all settings in the file
+        for key, value in settings.items():
+            self.update_or_write_paths(key, str(value))
+
         if delete == "delete":
             self.root.destroy()   
 

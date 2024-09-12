@@ -1,0 +1,52 @@
+import customtkinter as ctk
+import tkinter as tk
+
+def create_scrollable_frame(parent):
+    # Create a canvas and a scrollbar
+    canvas = ctk.CTkCanvas(parent)
+    scrollbar = ctk.CTkScrollbar(parent, orientation="vertical", command=canvas.yview)
+    
+    # Create a frame to hold the scrollable content
+    scrollable_frame = ctk.CTkFrame(canvas)
+    
+    # Create a window in the canvas to hold the scrollable frame
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    
+    # Update scroll region when the frame is resized
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+    
+    # Configure scrollbar and canvas
+    scrollbar.configure(command=canvas.yview)
+    canvas.configure(width=300, height=200)
+
+    # Pack the canvas and scrollbar
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    return canvas, scrollable_frame
+
+# Initialize the main application window
+root = ctk.CTk()  # Use CTk instead of tk.Tk()
+root.title("Scrollable Box Example")
+root.geometry("400x300")
+
+# Create a scrollable frame
+canvas, scrollable_frame = create_scrollable_frame(root)
+
+# Add some content to the scrollable frame
+for i in range(30):
+    label = ctk.CTkLabel(scrollable_frame, text=f"Label {i}")
+    label.pack(pady=5, padx=5)
+
+# Ensure the canvas updates the scrollbar when content is added
+def update_scrollbar(event):
+    canvas.configure(scrollregion=canvas.bbox("all"))
+
+# Bind the update function to any changes
+canvas.bind('<Configure>', update_scrollbar)
+
+# Run the application
+root.mainloop()

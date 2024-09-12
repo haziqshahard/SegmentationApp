@@ -8,3 +8,4 @@ dotsize=6
 linewidth=3
 smoothing=140
 numpoints=70
+paths=['C:/Users/Haziq/OneDrive - Imperial College London/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Images/skipped_missingmyo/07SEP2021P1_3(SKIPPED)', 'C:/Users/Haziq/OneDrive - Imperial College London/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Images/skipped_missingmyo/07SEP2021P3_1(middle slices look difficult)']
