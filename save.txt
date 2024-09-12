@@ -1,0 +1,10 @@
+points=[]
+dotcolor=#4283ff
+dothovercolor=#BD7C00
+linecolor=#8ba2ff
+linehovercolor=#745D00
+polygoncolor=(0, 0, 255, 25)
+dotsize=6
+linewidth=3
+smoothing=140
+numpoints=70
