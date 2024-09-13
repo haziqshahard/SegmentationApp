@@ -52,6 +52,8 @@ class ViewHelper(ctk.CTkFrame):
 
         # Load base path and images
         self.base_path = filedialog.askdirectory(title="Select the base folder")
+        #If the base_path is empty, needs to just display "Please select case file"
+
         print(self.base_path)
         self.load_images()
 
@@ -331,14 +333,11 @@ class ViewHelper(ctk.CTkFrame):
             self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
 
 # Create the main window
-root = ctk.CTk()
-root.title("Image Scroller")
+if __name__ == "__main__":
+    root = ctk.CTk()
+    root.title("ViewHelper")
 
-imagescroller = ViewHelper(root=root)
-# imagescroller.update(morepoints)
-# image_scroller.pack(fill="both", expand=True)
-
-# Start the Tkinter event loop
-root.mainloop()
+    imagescroller = ViewHelper(root=root)
+    root.mainloop()
             
 
