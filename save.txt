@@ -1,11 +1,11 @@
 points=[]
-dotcolor=#1a4c6f
-dothovercolor=#E5B390
+dotcolor=#7885e3
+dothovercolor=#877A1C
 linecolor=#228eff
 linehovercolor=#DD7100
 polygoncolor=(89, 145, 255, 39)
-dotsize=6
-linewidth=3
+dotsize=3
+linewidth=2
 smoothing=176
 numpoints=50
-paths=[['C:/Users/Haziq/OneDrive - Imperial College London/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Images/TOF 05 AUG 2016 P1A (one week after followup)[Part of MYO missing]', 'notcompleted']]
+paths=[['C:/Users/Haziq/OneDrive - Imperial College London/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Images/TOF 05 AUG 2016 P1A (one week after followup)[Part of MYO missing]', 'notcompleted'], ['C:/Users/Haziq/OneDrive - Imperial College London/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Images/TOF 24JUN2016 P1', 'completed']]

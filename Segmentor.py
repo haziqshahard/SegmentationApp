@@ -286,6 +286,7 @@ class PolygonDrawer(ctk.CTkFrame):
     def on_resize(self,event):
          #Implemented from https://www.tutorialspoint.com/how-to-set-the-canvas-size-properly-in-tkinter
         #Initializing new width and height        
+        # print("resizing")
         scale_x = self.canvas.winfo_width() / self.original_width
         scale_y = self.canvas.winfo_height() / self.original_height
 
@@ -853,7 +854,7 @@ class PolygonDrawer(ctk.CTkFrame):
             except:
                 self.polygoncolor = None
         if self.settings.get('dotsize') is not None:
-            self.dotsize = int(self.settings.get('dotsize'))
+            self.dot_size = int(self.settings.get('dotsize'))
         if self.settings.get('linewidth') is not None:
             self.line_width = int(self.settings.get('linewidth'))
         if self.settings.get('smoothing') is not None:

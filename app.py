@@ -44,7 +44,12 @@ class App(ctk.CTk):
         # viewhelper.grid(row=0, column=1, sticky="ns")
         self.caseselector = CaseSelector(self, row=1, column=0)
 
-        self.protocol("WM_DELETE_WINDOW", lambda d="delete": self.segmentor.save_settings(d))
+        self.protocol("WM_DELETE_WINDOW", lambda d="delete": saveeverything(d))
+
+        def saveeverything(d):
+            self.segmentor.save_settings(d)
+            self.caseselector.savecases()
+
 
     def preloadcases(self):
         with open("save.txt", 'r') as file:

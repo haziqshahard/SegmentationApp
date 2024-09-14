@@ -99,7 +99,11 @@ class CaseSelector(ctk.CTkFrame):
         # Step 4: Write the updated content back to the file
         with open('save.txt', 'w') as file:
             file.writelines(lines)
-        self.window.destroy()  
+        if self.debug == False:
+            return
+        else:
+            self.window.destroy()  
+            
     
     def preloadcases(self):
         #CAN DEPRECATE THIS AS DOING IT IN THE SUPER 
