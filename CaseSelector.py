@@ -9,11 +9,12 @@ class CaseSelector(ctk.CTkFrame):
     Window then saves the file path and displays it.
     Goes into save.txt with all the case files so that when it is next opened, can just be clicked and it will appear
     """
-    def __init__(self, root):
-        super().__init__(root)
-        self.root = root
-        self.root.title("Case Selector")
-        self.root.protocol("WM_DELETE_WINDOW", self.savecases)
+    def __init__(self, window, debug=False, row=1, column=0):
+        super().__init__(window)
+        self.debug = debug
+        self.window = window
+        self.window.title("Case Selector")
+        self.window.protocol("WM_DELETE_WINDOW", self.savecases)
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")  # Other themes: "blue", "green"
         self.fontsize = 15
@@ -21,39 +22,63 @@ class CaseSelector(ctk.CTkFrame):
         self.settings = {}
         self.paths = []
 
-        self.root.grid_columnconfigure(0,weight=1)
-        self.root.grid_rowconfigure(0,weight=1)
-        self.root.geometry("675x300")
+        if debug==True:
+            self.window.columnconfigure(0, weight=1)
+            self.window.rowconfigure(0, weight=1)
 
-        mainframe = ctk.CTkFrame(master = self.root, width=675, height=300)
+        self.root = ctk.CTkFrame(master=self.window)
+        self.root.rowconfigure(0, weight=1)
+        self.root.columnconfigure(0, weight=1)
+        self.root.grid(row=0, column=0, padx=5, pady=5)
+
+        if debug==False:
+            # self.root.configure(height=300)
+            self.root.grid(row=row, column=column, columnspan=2,  sticky="nsew")
+        else:
+            self.root.grid(row=0, column=0, sticky="nsew")
+
+        # self.root.grid(row=row, column=column, columnspan=2, sticky="nsew")
+        # self.root.rowconfigure(0,weight = 1)
+        # self.root.columnconfigure(0, weight=1)
+
         self.original_width = self.root.winfo_width()
-        self.original_height = self.root.winfo_height()
+        self.original_height = 200
         self.scale_factor = 1
-        mainframe.grid_rowconfigure(0,weight=1)
-        mainframe.grid_columnconfigure(0,weight=1)
-        mainframe.grid(row=0, column=0,padx=10, pady=10, sticky="nsew")
 
-        self.scrollframe = ctk.CTkScrollableFrame(master=mainframe, label_text="Case Selector", label_anchor="w", label_font=(self.font,self.fontsize*self.scale_factor))
+        self.scrollframe = ctk.CTkScrollableFrame(master=self.root, label_text="Case Selector", label_anchor="w"
+                                                  ,label_font=(self.font,self.fontsize*self.scale_factor))
         self.scrollframe.grid(row=0, column=0,sticky="nsew")
 
         self.buttons = []
 
-        btn = ctk.CTkButton(master=mainframe,text="Select Case", command=self.selectcase, font=(self.font,self.fontsize*self.scale_factor))
+        btn = ctk.CTkButton(master=self.root,text="Select Case", command=self.selectcase, font=(self.font,self.fontsize*self.scale_factor))
         self.fg_color = getattr(btn, "_fg_color")
         self.hover_color = getattr(btn, "_hover_color")
-        btn.grid(row=1, column=0, padx=10, pady=10, sticky="e")
+        self.originalborder = btn.cget("border_color")  
+        btn.grid(row=1, column=0, padx=10, pady=10, sticky="se")
+
+        self.selectedbutton = None
 
         self.preloadcases()
+        if debug == False:
+            idx = self.find_index(self.paths,self.window.base_path)
+            self.selectedbutton = self.buttons[idx]
+            self.selectedbutton.configure(border_color = "white", border_width=2)
+            #Whatever the app's base path is, check the 
+        
 
     def selectcase(self):
         self.base_path = tk.filedialog.askdirectory(title="Select the Case")
-        if self.base_path in self.paths:
+        if any(self.base_path in sublist for sublist in self.paths):
             CTkMessagebox(message="This Case is already present", icon="cancel")
         else:
-            self.paths += [[str(self.base_path),"notcompleted"]]
-            # print(self.paths)
-            self.createbutton(self.base_path)
-            self.renderbuttons()
+            if os.path.exists(self.base_path):
+                self.paths += [[str(self.base_path),"notcompleted"]]
+                # print(self.paths)
+                self.createbutton(self.base_path)
+                self.renderbuttons()
+            else:
+                self.selectcase()
         return
     
     def savecases(self):
@@ -74,9 +99,10 @@ class CaseSelector(ctk.CTkFrame):
         # Step 4: Write the updated content back to the file
         with open('save.txt', 'w') as file:
             file.writelines(lines)
-        self.root.destroy()  
+        self.window.destroy()  
     
     def preloadcases(self):
+        #CAN DEPRECATE THIS AS DOING IT IN THE SUPER 
         with open("save.txt", 'r') as file:
             for line in file:
                 # Strip any surrounding whitespace and skip empty lines
@@ -105,15 +131,19 @@ class CaseSelector(ctk.CTkFrame):
     def createbutton(self, path):
         case = os.path.basename(os.path.normpath(path))
 
-        pathidx = self.find_index(self.paths,path)
+        # pathidx = self.find_index(self.paths,path)
         # print(self.paths)
         # print(pathidx)    
         # pathidx = self.paths.index(path)
-        btn = ctk.CTkButton(master=self.scrollframe, text=f"{case}", command=self.loadcase(),font=(self.font,self.fontsize*self.scale_factor),anchor="center")
-        btn.bind("<Button-3>", command=lambda event, pathidx=pathidx: self.handle_right_click(event, pathidx = pathidx))
+        btn = ctk.CTkButton(master=self.scrollframe, height=30, text=f"{case}", 
+                            font=(self.font,self.fontsize),anchor="w")
+        btn.bind("<Button-1>", command=lambda event, path=path: self.loadcase(event, path = path))
+        btn.bind("<Button-3>", command=lambda event, path=path: self.handle_right_click(event, path = path))
+
         self.buttons.append(btn)
     
-    def handle_right_click(self, event, pathidx):
+    def handle_right_click(self, event, path):
+        pathidx = self.find_index(self.paths,path)
         # Create a context menu
         context_menu = tk.Menu(self.root, tearoff=0)
         # Add 'Delete Case' option to the context menu
@@ -122,13 +152,21 @@ class CaseSelector(ctk.CTkFrame):
         # Show the menu at the position of the right-click
         context_menu.tk_popup(event.x_root, event.y_root)
 
-    def delete_button(self, pathidx):
+    def delete_button(self,pathidx):
         # Destroy the button that was right-clicked
         self.paths.pop(pathidx)
         button = self.buttons.pop(pathidx)
+        if self.selectedbutton == button:
+            self.selectedbutton = None
         button.destroy()
         self.renderbuttons()
         self.scrollframe.update_idletasks()
+        if len(self.buttons) == 1:
+            self.loadcase("",self.paths[0][0])
+
+        if self.debug == False:
+            if len(self.paths) == 0:
+                self.selectcase()
 
     def switchcompleted(self, pathidx):
         button = self.buttons[pathidx]
@@ -149,11 +187,32 @@ class CaseSelector(ctk.CTkFrame):
             button.configure(fg_color="green4", hover_color="darkolivegreen4")
         else:
             button.configure(fg_color=self.fg_color[1], hover_color = self.hover_color[1])
-
-    def loadcase(self):
-        return
+    
+    def loadcase(self, event, path):
+        # print(self.buttons)
+        pathidx = self.find_index(self.paths,path)
+        button = self.buttons[pathidx]
+        #Check if any other buttons have been selected
+        #If any other buttons are selected, set the selected one to normal and 
+        # change the clicked button to white 
+        button.configure(border_color = "white", border_width=2)
+        if self.selectedbutton is not None and button != self.selectedbutton:
+            self.selectedbutton.configure(border_color = self.originalborder, border_width=0)
+        else:
+            button.configure(border_color = "white", border_width=2)
+        if self.debug == False: 
+            self.window.base_path = self.paths[pathidx][0]
+            image_path = os.path.join(self.window.base_path, "time001", 'slice001time001.png')
+            self.window.image_path = image_path.replace('\\', '/')
+            self.window.segmentor.update()
+            self.window.viewhelper.update()
+        elif self.debug == True:
+            print(self.paths[pathidx][0])
+        self.selectedbutton = button
+    
+       
 
 if __name__ == "__main__":
     root=ctk.CTk()
-    app = CaseSelector(root)
+    app = CaseSelector(root, debug=True)
     root.mainloop()
