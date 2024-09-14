@@ -21,27 +21,40 @@ class ViewHelper(ctk.CTkFrame):
     render_polygon has to show the polygon if it exists, and not show it if it doesnt
     shouldn't need constant toggling in order to show the thing
     """
-    def __init__(self, root, points = []):
-        super().__init__(root)
+    def __init__(self, window, debug=False, row=1, column=0):
+        super().__init__(window)
         self.configure(fg_color="transparent")
-        self.root = root
-        self.grid(sticky="nsew")
+        self.window = window
+        # self.grid(sticky="nsew")
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")  # Other themes: "blue", "green"
+        self.font = "Helvetica"
+
+        if debug==True:
+            self.window.columnconfigure(0, weight=1)
+            self.window.rowconfigure(0, weight=1)
+
+        self.root = ctk.CTkFrame(master=self.window)
+        if debug==False:
+            self.root.grid(row=row, column=column,padx=5, pady=5, sticky="nsew")
+        else:
+            self.root.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+
+        self.root.grid_rowconfigure(1, minsize=65)
 
         # Initialize variables
         self.time_index = 0
         self.slice_index = 0
-        self.original_width = 0
-        self.original_height = 0
-        self.aspect_ratio = 0
-        self.last_width = 0
-        self.font_size=20
+        self.original_width = 200
+        self.original_height = 400
+        self.aspect_ratio = 1
+        self.last_width = 200
+        self.font_size=15
         self.show_polygon = False
 
-        self.points = points
+        self.points = []
         self.scale_factor = 1
-        self.scaledpoints = points
+        self.scaledpoints = []
         self.lines=[]
         self.polytag = None
 
@@ -51,10 +64,13 @@ class ViewHelper(ctk.CTkFrame):
         self.polygoncolor = (0,0,255,int(0.1*255))
 
         # Load base path and images
-        self.base_path = filedialog.askdirectory(title="Select the base folder")
+        if debug==False:
+            self.base_path = window.base_path
+        else:
+            self.base_path = filedialog.askdirectory(title="Select the base folder")
         #If the base_path is empty, needs to just display "Please select case file"
 
-        print(self.base_path)
+        # print(self.base_path)
         self.load_images()
 
         # Load the initial image
@@ -67,11 +83,9 @@ class ViewHelper(ctk.CTkFrame):
         self.bind_keys()
         self.root.focus_set()
 
-    def update(self,points):
-        self.points = points
-        if len(self.points) != 0:
-            self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
-
+    def update(self):
+        self.destroy()
+        ViewHelper(self.window, row=0, column=1)
     def load_images(self):
         """Load time folders and slice files."""
         # Regular expression to match time folders in the format time001, time002, etc.
@@ -90,14 +104,16 @@ class ViewHelper(ctk.CTkFrame):
         """Load and display the image based on current slice and time index."""
         time_folder = self.time_folders[time_index]
         slice_file = self.slice_files[time_index][slice_index]
-        image_path = os.path.join(self.base_path, time_folder, slice_file)
+        self.image_path = os.path.join(self.base_path, time_folder, slice_file)
 
         # Convert to the correct format for the operating system
-        image_path = image_path.replace('\\', '/')
+        self.image_path = self.image_path.replace('\\', '/')
+        self.mask_path = self.base_path + "/time{time:03}/segmented/Segmented Slice{slice:03}.png".format(time=self.time_index+1, slice=self.slice_index+1)
+        # print(self.image_path)
         # print(f"Loading image: {image_path}")  # Debugging line
 
         try:
-            self.img = Image.open(image_path) # Resize the image for display
+            self.img = Image.open(self.image_path) # Resize the image for display
             self.photo = ImageTk.PhotoImage(self.img)
             
             self.original_width = self.img.width
@@ -140,14 +156,49 @@ class ViewHelper(ctk.CTkFrame):
             set_aspect(self.canvas,pad_frame, aspect_ratio=self.aspect_ratio)
             self.root.rowconfigure(0, weight=1)
             self.root.columnconfigure(0,weight=1)
-            pad_frame.configure(width=self.original_width, height=self.original_height)           
+            pad_frame.configure(width=self.original_width, height=self.original_height)    
 
             #Time/Slice info
-            self.info = ctk.CTkFrame(master=self.root,corner_radius=5)
-            self.info.grid(row=1, column=0, padx=10, pady=10, sticky="ns")    
-            self.labelinfo =ctk.CTkLabel(master=self.info, text=f"Time: {self.time_index+1}/{len(self.time_folders)}, Slice: {self.slice_index+1}/{len(self.slice_files[0])}",
-                                         font=('TkDefaultFont',self.font_size,'bold'))
-            self.labelinfo.grid(row=0,column=0, padx=10, pady=10)
+            self.info = ctk.CTkFrame(master=self.root)
+            self.info.grid(row=1, column=0, padx=5, pady=5, sticky="ns")    
+            self.info.grid_rowconfigure(0, weight=1)
+            self.info.grid_columnconfigure(0, weight=1)
+            self.labelinfo =ctk.CTkLabel(master=self.info, text=f"Time: {self.time_index+1:02d}/{len(self.time_folders)}, Slice: {self.slice_index+1:02d}/{len(self.slice_files[0])}",
+                                         font=('TkDefaultFont',self.font_size+5,'bold'))
+            self.labelinfo.grid(row=0,column=0, padx=10, sticky="")
+
+            #Info box for file movements
+            self.moveinfo = ctk.CTkFrame(master=self.root)
+            self.moveinfo.grid(row=1, column=0, padx=(10,10), pady=5,sticky="e")
+            self.moveinfo.rowconfigure(0, weight=0)
+            self.moveinfo.rowconfigure(1, weight=0)
+            right_arrow = "\u2192"
+            left_arrow = "\u2190"
+            up_arrow = "\u219F"
+            down_arrow = "\u21A1"
+
+            self.labelfontsize = 15
+
+            padx=4
+            upbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
+            upbox.grid(row=0,column=1, padx=padx, pady=0, sticky="nsew")
+            uplabel = ctk.CTkLabel(master=upbox, text=f"△", font=(self.font, self.labelfontsize,'bold'), anchor='center', justify='center')
+            uplabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+            
+            downbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
+            downbox.grid(row=1,column=1, padx=padx, pady=0, sticky="nsew")
+            downlabel = ctk.CTkLabel(master=downbox, text=f"▽", font=(self.font, self.labelfontsize,'bold'), anchor='center', justify='center')
+            downlabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+            
+            leftbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
+            leftbox.grid(row=1,column=0, padx=(padx,0), pady=0, sticky="nsew")
+            leftlabel = ctk.CTkLabel(master=leftbox, text=f"◁", font=(self.font, self.labelfontsize+10,'bold'), anchor='center', justify='center')
+            leftlabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+
+            rightbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
+            rightbox.grid(row=1,column=2, padx=(0,padx), pady=0, sticky="nsew")
+            rightlabel = ctk.CTkLabel(master=rightbox, text=f"▷", font=(self.font, self.labelfontsize+10,'bold'), anchor='center', justify='center')
+            rightlabel.grid(row=1,column=2, padx=7, pady=(1,1), sticky="nsew")
 
             #Display image
             self.canvimg = self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items
@@ -156,19 +207,16 @@ class ViewHelper(ctk.CTkFrame):
             # self.render_polygon()     
         
         except Exception as e:
-            print(f"Error loading image: {e}")  # Debugging line
-        
-        #Check if segmented file exists
-        #If both segmented file exists as well as drawing on the thing, allow for the user to choose which they would like to view
-    
+            CTkMessagebox(master=self.window, message=f"Error loading image: {e}", icon="cancel")
+            
     def bind_keys(self):
-        self.root.bind("<Configure>", self.on_resize)
+        self.window.bind("<Configure>", self.on_resize)
 
         """Bind arrow keys to the widget."""
-        self.root.bind("<Right>", self.on_key_press)
-        self.root.bind("<Left>", self.on_key_press)
-        self.root.bind("<Up>", self.on_key_press)
-        self.root.bind("<Down>", self.on_key_press)
+        self.window.bind("<Right>", self.on_key_press)
+        self.window.bind("<Left>", self.on_key_press)
+        self.window.bind("<Up>", self.on_key_press)
+        self.window.bind("<Down>", self.on_key_press)
 
         self.canvas.bind("<Button-3>", self.handle_right_click)
 
@@ -188,6 +236,9 @@ class ViewHelper(ctk.CTkFrame):
         #Debugging step - for whatever reason it initializes at 0
         if new_height == 0:
             new_height = 1
+
+        if new_width == 0:
+            new_width = 1
 
         #Scaling image and photo
         scaled_image = self.img.resize((new_width, new_height), Image.Resampling.LANCZOS)
@@ -220,10 +271,11 @@ class ViewHelper(ctk.CTkFrame):
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
 
         self.updateimage(self.slice_index, self.time_index)
-        path = self.base_path + "/time{time:03}/segmented/Segmented Slice{slice:03}.png".format(time=self.time_index+1, slice=self.slice_index+1)
+        self.mask_path = self.base_path + "/time{time:03}/segmented/Segmented Slice{slice:03}.png".format(time=self.time_index+1, slice=self.slice_index+1)
+        # print(self.time_index, self.slice_index)
         if self.show_polygon:
-            if os.path.isfile(path):
-                self.masktopoints(path)
+            if os.path.isfile(self.mask_path):
+                self.masktopoints(self.mask_path)
                 # print(path)
                 self.render_polygon()
             else:
@@ -235,7 +287,6 @@ class ViewHelper(ctk.CTkFrame):
             # print("clearing points")
             self.points = []
             self.scaledpoints = []
-
 
     def handle_right_click(self,event):
         clicked_items = self.canvas.find_withtag("current")
@@ -250,12 +301,14 @@ class ViewHelper(ctk.CTkFrame):
             # print("NOT Showing polygon")
         else:
             self.show_polygon = True
-            self.render_polygon()
+        self.render_polygon()
     
     def render_polygon(self):
         if self.show_polygon:
             # print(f"Current time:{self.time_index}, Current Slice:{self.slice_index}")
             self.delete_polygon()
+            if os.path.isfile(self.mask_path):
+                self.masktopoints(self.mask_path)
             if len(self.points) == 0:
                 return
             else:
@@ -292,15 +345,15 @@ class ViewHelper(ctk.CTkFrame):
     def updateimage(self, slice_index, time_index):
         time_folder = self.time_folders[time_index]
         slice_file = self.slice_files[time_index][slice_index]
-        image_path = os.path.join(self.base_path, time_folder, slice_file)
+        self.image_path = os.path.join(self.base_path, time_folder, slice_file)
 
         # Convert to the correct format for the operating system
-        image_path = image_path.replace('\\', '/')
+        self.image_path = self.image_path.replace('\\', '/')
         try:
-            self.img = Image.open(image_path) # Resize the image for display
+            self.img = Image.open(self.image_path) # Resize the image for display
             self.photo = ImageTk.PhotoImage(self.img)
         except OSError:
-            CTkMessagebox(message=f"Image f{image_path} not loaded, likely OneDrive Issue.",icon="cancel")
+            CTkMessagebox(message=f"Image f{self.image_path} not loaded, likely OneDrive Issue.",icon="cancel")
             
         # Calculate new width and height while maintaining aspect ratio
         new_width = int(self.original_width * self.scale_factor)
@@ -313,11 +366,12 @@ class ViewHelper(ctk.CTkFrame):
         self.canvas.itemconfig(self.canvimg, image=self.scaled_photo)
 
         #Update label
-        self.labelinfo.configure(text=f"Time: {self.time_index+1}/{len(self.time_folders)}, Slice: {self.slice_index+1}/{len(self.slice_files[0])}",font=('TkDefaultFont',self.font_size,'bold'))    
+        self.labelinfo.configure(text=f"Time: {self.time_index+1:02d}/{len(self.time_folders)}, Slice: {self.slice_index+1:02d}/{len(self.slice_files[0])}")    
     
     def masktopoints(self,maskpath):
         # Load the PNG image as a grayscale image (0 means grayscale mode)
         binary_mask = cv2.imread(maskpath, cv2.IMREAD_GRAYSCALE)
+        binary_mask = cv2.bitwise_not(binary_mask)
         # Assuming 'binary_mask' is your binary mask as a numpy array
         # Find contours in the binary mask
         contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -337,7 +391,7 @@ if __name__ == "__main__":
     root = ctk.CTk()
     root.title("ViewHelper")
 
-    imagescroller = ViewHelper(root=root)
+    imagescroller = ViewHelper(root, debug=True)
     root.mainloop()
             
 

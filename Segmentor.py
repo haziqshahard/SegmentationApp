@@ -23,28 +23,44 @@ class PolygonDrawer(ctk.CTkFrame):
     -The whole polygon can be removed
     -TWO MODES:
         Draw mode: Can bring forth previous mask, but does NOT save the current one when switching modes
-        Fix (CHANGE TO EDIT) mode: Checks to see the existence of segmented, and allows for redrawing and then saving.
+        Edit mode: Checks to see the existence of segmented, and allows for redrawing and then saving.
     """
-    def __init__(self,root):
+    def __init__(self,window, image_path="", debug=False, row=1, column=0):
         #Defining windows
-        super().__init__(root)
-        self.root = root
-        self.root.protocol("WM_DELETE_WINDOW", lambda d="delete": self.save_settings(d))
-        self.root.title("Polygon Drawer")
+        super().__init__(window)
+        self.debug = debug
+        self.window = window
+        self.window.title("Polygon Drawer")
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")  # Other themes: "blue", "green"
         self.fontsize = 20
         self.font = 'Helvetica'
         self.settings = {}
 
-        pad_frame = ctk.CTkFrame(master=self.root, width = 200,height=200)
+        if debug==True:
+            self.window.columnconfigure(0, weight=1)
+            self.window.rowconfigure(0, weight=1)
+            
+        self.window.protocol("WM_DELETE_WINDOW", lambda d="delete": self.save_settings(d))
+        self.root = ctk.CTkFrame(master=self.window)
+        if debug==False:
+            self.root.grid(row=row, column=column, padx=5, pady=5,  sticky="nsew")
+        else:
+            self.root.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        
+        self.root.grid_rowconfigure(1, minsize=65)
+
+        pad_frame = ctk.CTkFrame(master=self.root)
         # pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
-        pad_frame.grid(row=0, column=0,columnspan=4, sticky="nsew", padx=10, pady=(10,0))
+        pad_frame.grid(row=0, column=0,columnspan=3, sticky="nsew", padx=10, pady=(10,0))
         
         #Loading image
         #--To be changed to a button next time--
         #--Must be dynamic, able to change the image whenever
-        self.image_path = filedialog.askopenfilename(title="Select an image")
+        if debug==False:
+            self.image_path = window.image_path
+        else:
+            self.image_path = filedialog.askopenfilename(title="Select an image")
         self.current_slice = int(os.path.basename(self.image_path)[5:8])
         self.current_time = int(os.path.basename(self.image_path)[12:15])
 
@@ -64,7 +80,7 @@ class PolygonDrawer(ctk.CTkFrame):
 
         self.aspect_ratio = self.original_width/self.original_height
         #Create Canvas
-        self.canvas = tk.Canvas(root, width=self.pilimage.width, height=self.pilimage.height,borderwidth=0, highlightbackground="#000000",scrollregion=(0, 0, 0, 0))
+        self.canvas = tk.Canvas(self.root, width=self.pilimage.width, height=self.pilimage.height,borderwidth=0, highlightbackground="#000000",scrollregion=(0, 0, 0, 0))
         
         def set_aspect(content_frame, pad_frame, aspect_ratio):
         # Taken from user Bryan Oakley : https://stackoverflow.com/a/16548607
@@ -95,6 +111,7 @@ class PolygonDrawer(ctk.CTkFrame):
             pad_frame.bind("<Configure>", enforce_aspect_ratio)
         set_aspect(self.canvas,pad_frame, aspect_ratio=self.aspect_ratio)
         self.root.rowconfigure(0, weight=1)
+        self.root.rowconfigure(1, weight=0)
         self.root.columnconfigure(0,weight=1)
         self.root.columnconfigure(1,weight=1)
         self.root.columnconfigure(2,weight=1)
@@ -103,54 +120,56 @@ class PolygonDrawer(ctk.CTkFrame):
         #Mode Info
         self.current_mode = "Draw"
         self.currentmodedialog = ctk.CTkFrame(master=self.root)
-        self.currentmodedialog.grid(row=1, column=0, padx=10, pady=10, sticky="w")
-        self.modelabel = ctk.CTkLabel(master=self.currentmodedialog, text=f"{self.current_mode} Mode",font=(self.font,self.fontsize))
+        self.currentmodedialog.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        self.modelabel = ctk.CTkLabel(master=self.currentmodedialog, 
+                                        text=f"{self.current_mode} Mode",
+                                        font=(self.font,self.fontsize),
+                                        justify="center")
         self.modelabel.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")   
 
         #Save image button
-        self.savedialog = ctk.CTkFrame(master=self.root)
-        self.savedialog.grid(row=1, column=1,padx=10, pady=10, sticky="ns")
-        self.label = ctk.CTkLabel(master=self.savedialog, text="Apply smoothing and save image",font=(self.font,self.fontsize), anchor="center")
-        self.btn = ctk.CTkButton(master=self.savedialog, text="Save Image", command=self.save_mask, font=(self.font, self.fontsize), height = 50)
-        
-        self.label.grid(row=0, column=0,padx=10, pady=20,sticky="nsew")
-        self.btn.grid(row=1, column=0, padx=10, pady=(0,20), sticky="nsew")
+        self.btn = ctk.CTkButton(master=self.root, text="Save Mask", command=self.save_mask, font=(self.font, self.fontsize), height=40)
+        # self.label.grid(row=0, column=0,padx=5, pady=5,sticky="nsew")
+        self.btn.grid(row=1, column=1, padx=5, pady=5)
 
         #Slice/Time info
         self.info = ctk.CTkFrame(master=self.root,fg_color="transparent")
-        self.info.grid(row=1, column=2, padx=5, pady=10,sticky="e")
+        self.info.grid(row=1, column=2, padx=5, pady=5,sticky="e")
 
-        self.fileinfo = ctk.CTkFrame(master=self.info, fg_color=self.savedialog.cget('fg_color'))
-        self.fileinfo.grid(row=0, column=2, padx=5, pady=10,sticky="ns")
-        self.filelabel = ctk.CTkLabel(master=self.fileinfo, text=f"Slice:{self.current_slice}/{len(self.slice_files[0])}|Time:{self.current_time}/{len(self.time_folders)}"
-                                      ,font=(self.font,self.fontsize), anchor='center', justify='center')
-        self.filelabel.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        # Combine "A" and the previous slice into one text string
+        #Info box for current slice/time
+        self.info.grid_columnconfigure(0, weight=0)
+        self.fileinfo = ctk.CTkFrame(master=self.info, fg_color=self.currentmodedialog.cget('fg_color'))
+        self.fileinfo.grid(row=0, column=0, padx=5, pady=5,sticky="nse")
+        self.filelabel = ctk.CTkLabel(master=self.fileinfo 
+                                      , text=f"Time:{self.current_time:02d}/{len(self.time_folders)}, Slice:{self.current_slice:02d}/{len(self.slice_files[0])}"
+                                      ,font=(self.font,self.fontsize-7,'bold'))
+        self.filelabel.grid(row=0, column=0, padx=5, pady=6, sticky="nsew")
 
-        self.moveinfo = ctk.CTkFrame(master=self.info,fg_color=self.savedialog.cget('fg_color'))
-        self.moveinfo.grid(row=1, column=2, padx=5, pady=10,sticky="ns")
-        self.alabel = ctk.CTkLabel(master=self.moveinfo, text=f"A\nPrevious Slice", font=(self.font, self.fontsize-4), anchor='center', justify='center')
+        #Info box for file movements
+        self.moveinfo = ctk.CTkFrame(master=self.info,fg_color=self.currentmodedialog.cget('fg_color'))
+        self.moveinfo.grid(row=0, column=1, padx=5, pady=5,sticky="ns")
+        self.alabel = ctk.CTkLabel(master=self.moveinfo, text=f"A\nPrevious Slice", font=(self.font, self.fontsize-7), anchor='center', justify='center')
         self.alabel.grid(row=1,column=0, padx=5, pady=5, sticky="nsew")
-        self.dlabel = ctk.CTkLabel(master=self.moveinfo, text=f"D\nNext Slice", font=(self.font, self.fontsize-4), anchor='center', justify='center')
+        self.dlabel = ctk.CTkLabel(master=self.moveinfo, text=f"D\nNext Slice", font=(self.font, self.fontsize-7), anchor='center', justify='center')
         self.dlabel.grid(row=1,column=1, padx=5, pady=5, sticky="nsew")
         #Display image on canvas
         self.canvimg=self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items
 
         #------BINDINGS-------
         # Bind canvas resize event
-        self.root.bind("<Configure>", self.on_resize)
+        self.canvas.bind("<Configure>", self.on_resize)
 
         #Binding mouse actions
         self.canvas.bind("<Button-1>", self.on_mouse_down)
         self.canvas.bind("<B1-Motion>", self.do_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
         self.canvas.bind("<Button-3>", self.handle_right_click)
-        self.root.bind("<a>", self.on_key_press)
-        self.root.bind("<d>", self.on_key_press)
-        self.root.bind("<A>", self.on_key_press)
-        self.root.bind("<D>", self.on_key_press)
+        self.window.bind("<a>", self.on_key_press)
+        self.window.bind("<d>", self.on_key_press)
+        self.window.bind("<A>", self.on_key_press)
+        self.window.bind("<D>", self.on_key_press)
 
-        self.root.focus_set()
+        self.window.focus_set()
 
         #CURRENT SCALE INFORMATION
         self.current_width = self.canvas.winfo_width()
@@ -165,7 +184,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.item_scale_factor = self.scale_factor
 
         self.event_data = {"item": None, "x": 0, "y": 0, "type": None}
-        self.drag_threshold = 5 #Threshold in pixels to determine if the movement is large enough
+        self.drag_threshold = 1 #Threshold in pixels to determine if the movement is large enough
         self.is_dragging = False
 
         self.dot_size = 6
@@ -180,6 +199,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.drawptbtwline = True
 
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
+        self.context_menu.add_command(label="Select Time", command=self.selecttime)
         self.context_menu.add_command(label="Delete Polygon", command=self.delete_polygon)
         self.context_menu.add_separator()
         self.context_menu.add_command(label="Dot Settings", command=self.dot_settings)
@@ -187,8 +207,8 @@ class PolygonDrawer(ctk.CTkFrame):
         self.context_menu.add_command(label="Redraw/Save Settings", command = self.redrawsave_settings)
         self.context_menu.add_command(label="Polygon Color", command=self.polygon_colorset)
         self.context_menu.add_separator()
-        self.context_menu.add_command(label="Toggle Fix/Draw Mode", command=self.toggle_mode)
-        self.context_menu.add_command(label="Refresh Current Fix Segmentation",command=self.fix_mode)
+        self.context_menu.add_command(label="Toggle Edit/Draw Mode", command=self.toggle_mode)
+        self.context_menu.add_command(label="Refresh Current Edit Segmentation",command=self.edit_mode)
         self.context_menu.add_command(label="Bring Previous", command = self.previous_poly)
 
         #-------COLORS------- 
@@ -197,24 +217,65 @@ class PolygonDrawer(ctk.CTkFrame):
         self.linecolor = "#001C55"
         self.linehovercolor = "#55DDE0"
 
-        self.polygoncolor = (0,0,255,int(0.1*255))
-
         self.load_settings()
+
+        if self.polygoncolor == None:
+            self.polygoncolor = (0,0,255,int(0.1*255))
+
+    def selecttime(self):
+        def submit_action():
+            try:
+                val = int(input_entry.get())
+                if val >= 1 and val<=len(self.time_folders):
+                    self.time_index = int(input_entry.get())-1
+                    self.current_time = val
+                    timewindow.destroy()
+                    if self.debug == False:
+                        self.window.image_path = os.path.join(self.base_path, f"time{val:03d}", f"slice{self.current_slice:3d}.png")
+                        self.window.time_index = self.time_index
+                        self.window.current_time = val
+                        self.window.load_images()
+                        self.window.load_image(slice_index = self.current_slice-1, time_index = self.time_index)
+                        self.update()
+                elif val<1 or val>len(self.time_folders):         
+                    CTkMessagebox(master=self.window, message="Please Enter a Valid Time from the Range", icon="warning")
+            except ValueError:
+                CTkMessagebox(master=self.window, message="Please Enter a Valid Time from the Range", icon="warning")
+
+        timewindow = ctk.CTkToplevel(self.root)
+        timewindow.resizable(False, False)
+        timewindow.grab_set()
+        label = ctk.CTkLabel(timewindow, text=f"Please Select a Time from 1-{len(self.time_folders)}:"
+                             ,font=(self.font, self.fontsize-5))
+        label.grid(row=0, column=0, pady=5, padx=10)
+
+        # Create an entry widget for text input
+        input_entry = ctk.CTkEntry(timewindow, width=200, font=(self.font, self.fontsize-5))
+        input_entry.grid(row=1, column=0, pady=5, padx=5)
+        # Create a button that triggers the submit_action function
+        submit_button = ctk.CTkButton(timewindow, text="Submit", 
+                                      command=submit_action, font=(self.font, self.fontsize-5))
+        submit_button.grid(row=2, column=0, pady=5, padx=5)
+        return
+
+    def update(self):
+        self.destroy()
+        PolygonDrawer(self.window, row=0, column=0)
 
     def load_images(self):
         """Load time folders and slice files."""
         # Regular expression to match time folders in the format time001, time002, etc.
         time_pattern = re.compile(r'^time\d{3}$')
-        print(self.base_path)
+        # print(self.base_path)
 
         # Get all time folders matching the format
         self.time_folders = sorted([d for d in os.listdir(self.base_path) 
                                     if os.path.isdir(os.path.join(self.base_path, d)) and time_pattern.match(d)])
-        print(f"Time folders found: {len(self.time_folders)}")  # Debugging line
+        # print(f"Time folders found: {len(self.time_folders)}")  # Debugging line
 
         # Get all slice files for each time folder
         self.slice_files = [sorted([f for f in os.listdir(os.path.join(self.base_path, t)) if os.path.isfile(os.path.join(self.base_path, t, f))]) for t in self.time_folders]
-        print(f"Slice folders found: {len(self.slice_files[0])}") 
+        # print(f"Slice folders found: {len(self.slice_files[0])}") 
 
     def hex_to_rgb(self,hex):
         rgb = tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
@@ -401,9 +462,9 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.itemconfig(self.canvimg, image=self.scaled_photo)
 
         #Update label
-        self.filelabel.configure(text=f"Slice:{self.current_slice}/{len(self.slice_files[0])}|Time:{self.current_time}/{len(self.time_folders)}")    
+        self.filelabel.configure(text=f"Time:{self.current_time:02d}/{len(self.time_folders)}, Slice:{self.current_slice:02d}/{len(self.slice_files[0])}")    
             
-        self.fix_mode()
+        self.edit_mode()
 
     def updateswitchpoints(self):
         exists = any(entry[0] == self.slice_index for entry in self.switchpoints)
@@ -593,7 +654,7 @@ class PolygonDrawer(ctk.CTkFrame):
         dotWindow.grab_set()
 
         def assign(e):
-            self.dotcolor = int(e)
+            self.dotcolor = e
             comp = self.hex_to_rgb(e[1:])
             self.dothovercolor = comp
             self.redraw_points()
@@ -629,7 +690,7 @@ class PolygonDrawer(ctk.CTkFrame):
         # lineWindow.after(100, lineWindow.lift) # Workaround for bug where main window takes focus
 
         def assign(e):
-            self.linecolor = int(e)
+            self.linecolor = e
             comp = self.hex_to_rgb(e[1:])
             self.linehovercolor = comp
             self.redraw_polygon()
@@ -668,8 +729,7 @@ class PolygonDrawer(ctk.CTkFrame):
                 self.lines.append(line)
                 # Bind hover events to the line
                 self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
-                self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))
-
+                self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))   
             if len(self.points) > 2 and self.points[0] != self.points[-1]:
                 line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)
                 self.lines.append(line)
@@ -701,52 +761,55 @@ class PolygonDrawer(ctk.CTkFrame):
         self.polygon = None
 
     def save_mask(self):
-        mask = Image.new('L', self.pilimage.size, 0)
-        draw = ImageDraw.Draw(mask)
-        # print(self.points)
-
-        x=[point[0] for point in self.points]
-        y=[point[1] for point in self.points]
-
-        # Add the first point to the end to close the loop
-        x.append(x[0])
-        y.append(y[0])
-
-        # Prepare the points for smoothing using splprep
-        tck, u = splprep([x, y], s=1, per=True)
-
-        # Generate smooth points along the curve
-        #ALLOW FOR THE SMOOTHNESS VALUE TO BE DECIDED?
-        u_new = np.linspace(0, 1, self.smoothing)
-        x_smooth, y_smooth = splev(u_new, tck)
-
-        # Combine smoothed x and y points into coordinates
-        smooth_coords = list(zip(x_smooth, y_smooth))
-
-        draw.polygon(smooth_coords, outline=1, fill=255)
-        mask = ImageOps.invert(mask)
-        
-        if self.current_mode == "Draw":
-            folder_path = os.path.dirname(self.image_path) + "/segmented"
-            if not os.path.exists(folder_path):
-                os.makedirs(folder_path)  # Creates folder and intermediate directories if they don't exist
-
-            impath = folder_path + "/Segmented Slice" + f"{self.current_slice:03d}" + ".png"
-            mask.save(impath)
-
-            #Maybe make this able to open the image/parent folder when clicked?
+        if self.points == []:
+            CTkMessagebox(master=self.window,message="Please Draw Points before Saving Mask", icon="warning")
+        else:
+            mask = Image.new('L', self.pilimage.size, 0)
+            draw = ImageDraw.Draw(mask)
             # print(self.points)
-            CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
-            # = ctk.CTkLabel(master=self.savedialog, text=f"Image saved to {impath}", font=('TkDefaultFont',self.fontsize))
-            self.label.grid(row=0, column=0,padx=5, pady=5)
-        elif self.current_mode == "Fix":
-            folder = os.path.dirname(self.image_path) + "/segmented"
-            segmentedslice = folder + f"/Segmented Slice{self.current_slice:03d}.png"
 
-            mask.save(segmentedslice)
-            CTkMessagebox(title="Fixed Mask Save",message = f"Mask saved to {segmentedslice}", icon='check')
-            # = ctk.CTkLabel(master=self.savedialog, text=f"Image saved to {impath}", font=('TkDefaultFont',self.fontsize))
-            self.label.grid(row=0, column=0,padx=5, pady=5)
+            x=[point[0] for point in self.points]
+            y=[point[1] for point in self.points]
+
+            # Add the first point to the end to close the loop
+            x.append(x[0])
+            y.append(y[0])
+
+            # Prepare the points for smoothing using splprep
+            tck, u = splprep([x, y], s=1, per=True)
+
+            # Generate smooth points along the curve
+            #ALLOW FOR THE SMOOTHNESS VALUE TO BE DECIDED?
+            u_new = np.linspace(0, 1, self.smoothing)
+            x_smooth, y_smooth = splev(u_new, tck)
+
+            # Combine smoothed x and y points into coordinates
+            smooth_coords = list(zip(x_smooth, y_smooth))
+
+            draw.polygon(smooth_coords, outline=1, fill=255)
+            mask = ImageOps.invert(mask)
+            
+            if self.current_mode == "Draw":
+                folder_path = os.path.dirname(self.image_path) + "/segmented"
+                if not os.path.exists(folder_path):
+                    os.makedirs(folder_path)  # Creates folder and intermediate directories if they don't exist
+
+                impath = folder_path + "/Segmented Slice" + f"{self.current_slice:03d}" + ".png"
+                mask.save(impath)
+
+                #Maybe make this able to open the image/parent folder when clicked?
+                # print(self.points)
+                CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
+                # = ctk.CTkLabel(master=self.savedialog, text=f"Image saved to {impath}", font=('TkDefaultFont',self.fontsize))
+                self.label.grid(row=0, column=0,padx=5, pady=5)
+            elif self.current_mode == "Edit":
+                folder = os.path.dirname(self.image_path) + "/segmented"
+                segmentedslice = folder + f"/Segmented Slice{self.current_slice:03d}.png"
+
+                mask.save(segmentedslice)
+                CTkMessagebox(title="Editted Mask Save",message = f"Mask saved to {segmentedslice}", icon='check')
+                # = ctk.CTkLabel(master=self.savedialog, text=f"Image saved to {impath}", font=('TkDefaultFont',self.fontsize))
+                self.label.grid(row=0, column=0,padx=5, pady=5)
 
     def polygon_colorset(self):
         def rgba_to_hex(rgba):
@@ -762,8 +825,8 @@ class PolygonDrawer(ctk.CTkFrame):
             return "#{:02X}{:02X}{:02X}{:02X}".format(r, g, b, a)
         
         pick_color = ctkpa.AskColor(initial_color=rgba_to_hex(self.polygoncolor))
-        color = pick_color.get()
-        self.polygoncolor = color
+        color = pick_color.get()[1:] #THIS IS IN HEX
+        self.polygoncolor = tuple(int(color[i:i+2], 16) for i in (0, 2, 4, 6))
         self.redraw_polygon()
 
     def load_settings(self):
@@ -785,7 +848,10 @@ class PolygonDrawer(ctk.CTkFrame):
         if self.settings.get('linehovercolor') is not None:
             self.linehovercolor = self.settings.get('linehovercolor')
         if self.settings.get('polygoncolor') is not None:
-            self.polygoncolor = ast.literal_eval(self.settings.get('polygoncolor'))
+            try:
+                self.polygoncolor = ast.literal_eval(self.settings.get('polygoncolor'))
+            except:
+                self.polygoncolor = None
         if self.settings.get('dotsize') is not None:
             self.dotsize = int(self.settings.get('dotsize'))
         if self.settings.get('linewidth') is not None:
@@ -836,20 +902,19 @@ class PolygonDrawer(ctk.CTkFrame):
         "smoothing=": int(self.smoothing),
         "numpoints=": int(self.numpoints)
         }
-
             # Update or write all settings in the file
         for key, value in settings.items():
             self.update_or_write_paths(key, str(value))
 
         if delete == "delete":
-            self.root.destroy()   
+            self.window.destroy()   
 
     def toggle_mode(self):
         if self.current_mode == "Draw":
-            self.current_mode = "Fix"
+            self.current_mode = "Edit"
             self.modelabel.configure(text=f"{self.current_mode} Mode",font=('TkDefaultFont',self.fontsize))
-            self.btn.configure(text="Save Fixed Mask")
-            self.fix_mode()
+            self.btn.configure(text="Save Edited Mask")
+            self.edit_mode()
         else:
             self.current_mode = "Draw"
             self.modelabel.configure(text=f"{self.current_mode} Mode",font=('TkDefaultFont',self.fontsize))           
@@ -859,15 +924,16 @@ class PolygonDrawer(ctk.CTkFrame):
             self.redraw_points()
         return
     
-    def fix_mode(self):
-        if self.current_mode == "Fix":
+    def edit_mode(self):
+        if self.current_mode == "Edit":
             folder = self.base_path + "/"+self.image_path.split("/")[-2] + "/segmented" 
             segmentedslice = folder + f"/Segmented Slice{self.current_slice:03d}.png"
             if os.path.exists(folder):
                 if os.path.exists(segmentedslice):
                     self.masktopoints(segmentedslice)    
-                    self.redraw_polygon()     
                     self.redraw_points()
+                    self.redraw_polygon()     
+
                 else:
                     CTkMessagebox(message=f"Slice{self.current_slice:03d} at time{self.current_time:03d} does not have segmentations",icon="cancel")
                     self.toggle_mode()
@@ -918,7 +984,6 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.itemconfig(line, fill=self.linecolor)
 
 if __name__ == "__main__":
-       
        root=ctk.CTk()
-       app = PolygonDrawer(root)
+       app = PolygonDrawer(root, debug=True)
        root.mainloop()
