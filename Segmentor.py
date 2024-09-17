@@ -30,9 +30,11 @@ class PolygonDrawer(ctk.CTkFrame):
         super().__init__(window)
         self.debug = debug
         self.window = window
-        self.window.title("Polygon Drawer")
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")  # Other themes: "blue", "green"
+        if self.debug == False:
+            ctk.set_default_color_theme(self.window.theme)  # Other themes: "blue", "green"
+        else:
+            ctk.set_default_color_theme("blue")
         self.fontsize = 20
         self.font = 'Helvetica'
         self.settings = {}
@@ -802,15 +804,15 @@ class PolygonDrawer(ctk.CTkFrame):
                 # print(self.points)
                 CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
                 # = ctk.CTkLabel(master=self.savedialog, text=f"Image saved to {impath}", font=('TkDefaultFont',self.fontsize))
-                self.label.grid(row=0, column=0,padx=5, pady=5)
+                # self.label.grid(row=0, column=0,padx=5, pady=5)
             elif self.current_mode == "Edit":
                 folder = os.path.dirname(self.image_path) + "/segmented"
                 segmentedslice = folder + f"/Segmented Slice{self.current_slice:03d}.png"
 
                 mask.save(segmentedslice)
-                CTkMessagebox(title="Editted Mask Save",message = f"Mask saved to {segmentedslice}", icon='check')
+                CTkMessagebox(title="Edited Mask Save",message = f"Edited Mask saved to {segmentedslice}", icon='check')
                 # = ctk.CTkLabel(master=self.savedialog, text=f"Image saved to {impath}", font=('TkDefaultFont',self.fontsize))
-                self.label.grid(row=0, column=0,padx=5, pady=5)
+                # self.label.grid(row=0, column=0,padx=5, pady=5)
 
     def polygon_colorset(self):
         def rgba_to_hex(rgba):
@@ -986,5 +988,6 @@ class PolygonDrawer(ctk.CTkFrame):
 
 if __name__ == "__main__":
        root=ctk.CTk()
+       root.title("Polygon Drawer")
        app = PolygonDrawer(root, debug=True)
        root.mainloop()

@@ -16,7 +16,10 @@ class CaseSelector(ctk.CTkFrame):
         self.window.title("Case Selector")
         self.window.protocol("WM_DELETE_WINDOW", self.savecases)
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")  # Other themes: "blue", "green"
+        if self.debug == False:
+            ctk.set_default_color_theme(self.window.theme)  # Other themes: "blue", "green"
+        else:
+            ctk.set_default_color_theme("blue")
         self.fontsize = 15
         self.font = 'Helvetica'
         self.settings = {}

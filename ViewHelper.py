@@ -23,11 +23,15 @@ class ViewHelper(ctk.CTkFrame):
     """
     def __init__(self, window, debug=False, row=1, column=0):
         super().__init__(window)
+        self.debug = debug
         self.configure(fg_color="transparent")
         self.window = window
         # self.grid(sticky="nsew")
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")  # Other themes: "blue", "green"
+        if self.debug == False:
+            ctk.set_default_color_theme(self.window.theme)  # Other themes: "blue", "green"
+        else:
+            ctk.set_default_color_theme("blue")
         self.font = "Helvetica"
 
         if debug==True:

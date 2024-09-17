@@ -17,11 +17,11 @@ from CaseSelector import *
 
 class App(ctk.CTk):
     def __init__(self):
-        """SOME ISSUE WITH THE DRAWER AS WELL"""
         super().__init__()
         # self.grid(sticky="nsew")
+        self.theme = "dark-blue"
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")  # Other themes: "blue", "green"
+        ctk.set_default_color_theme(self.theme)
         # self.after(0, lambda:self.state('zoomed'))
         self.settings = {}
         self.preloadcases()
@@ -44,11 +44,15 @@ class App(ctk.CTk):
         # viewhelper.grid(row=0, column=1, sticky="ns")
         self.caseselector = CaseSelector(self, row=1, column=0)
 
+        self.title("Segmentor App")
         self.protocol("WM_DELETE_WINDOW", lambda d="delete": saveeverything(d))
 
         def saveeverything(d):
             self.segmentor.save_settings(d)
             self.caseselector.savecases()
+
+        #Run app 
+        self.mainloop()
 
 
     def preloadcases(self):
@@ -91,9 +95,10 @@ class App(ctk.CTk):
         self.image_path = self.image_path.replace('\\', '/')
         # print(f"Loading image: {image_path}")  # Debugging line
 
+
 if __name__ == "__main__":
     app = App()
-    app.mainloop()
+    # app.mainloop()
             
 
 # frame = CTkFrame(master=app, border_width=2)
