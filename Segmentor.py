@@ -218,7 +218,8 @@ class PolygonDrawer(ctk.CTkFrame):
         self.dothovercolor = "#55DDE0"
         self.linecolor = "#001C55"
         self.linehovercolor = "#55DDE0"
-
+        self.polygoncolor = None
+        
         self.load_settings()
 
         if self.polygoncolor == None:
@@ -833,40 +834,45 @@ class PolygonDrawer(ctk.CTkFrame):
         self.redraw_polygon()
 
     def load_settings(self):
-        with open("save.txt", 'r') as file:
-            for line in file:
-                # Strip any surrounding whitespace and skip empty lines
-                line = line.strip()
-                if line and '=' in line:
-                    # Split the line into key and value
-                    key, value = line.split('=', 1)
-                    self.settings[key.strip()] = value.strip()
-        
-        if self.settings.get('dotcolor') is not None:
-            self.dotcolor = self.settings.get('dotcolor')
-        if self.settings.get('dothovercolor') is not None:
-            self.dothovercolor = self.settings.get('dothovercolor')
-        if self.settings.get('linecolor') is not None:
-            self.linecolor = self.settings.get('linecolor')
-        if self.settings.get('linehovercolor') is not None:
-            self.linehovercolor = self.settings.get('linehovercolor')
-        if self.settings.get('polygoncolor') is not None:
-            try:
-                self.polygoncolor = ast.literal_eval(self.settings.get('polygoncolor'))
-            except:
-                self.polygoncolor = None
-        if self.settings.get('dotsize') is not None:
-            self.dot_size = int(self.settings.get('dotsize'))
-        if self.settings.get('linewidth') is not None:
-            self.line_width = int(self.settings.get('linewidth'))
-        if self.settings.get('smoothing') is not None:
-            self.smoothing =int(self.settings.get('smoothing'))
-        if self.settings.get('numpoints') is not None:
-            self.numpoints =int(self.settings.get('numpoints'))
-        # if self.settings.get('points') is not None:
-        #     self.points = ast.literal_eval(self.settings.get('points'))
-        #     self.scalepoints()
-        #     self.redraw_points()
+        if os.path.exists('save.txt'):
+            with open("save.txt", 'r') as file:
+                for line in file:
+                    # Strip any surrounding whitespace and skip empty lines
+                    line = line.strip()
+                    if line and '=' in line:
+                        # Split the line into key and value
+                        key, value = line.split('=', 1)
+                        self.settings[key.strip()] = value.strip()
+            
+            if self.settings.get('dotcolor') is not None:
+                self.dotcolor = self.settings.get('dotcolor')
+            if self.settings.get('dothovercolor') is not None:
+                self.dothovercolor = self.settings.get('dothovercolor')
+            if self.settings.get('linecolor') is not None:
+                self.linecolor = self.settings.get('linecolor')
+            if self.settings.get('linehovercolor') is not None:
+                self.linehovercolor = self.settings.get('linehovercolor')
+            if self.settings.get('polygoncolor') is not None:
+                try:
+                    self.polygoncolor = ast.literal_eval(self.settings.get('polygoncolor'))
+                except:
+                    self.polygoncolor = None
+            if self.settings.get('dotsize') is not None:
+                self.dot_size = int(self.settings.get('dotsize'))
+            if self.settings.get('linewidth') is not None:
+                self.line_width = int(self.settings.get('linewidth'))
+            if self.settings.get('smoothing') is not None:
+                self.smoothing =int(self.settings.get('smoothing'))
+            if self.settings.get('numpoints') is not None:
+                self.numpoints =int(self.settings.get('numpoints'))
+            # if self.settings.get('points') is not None:
+            #     self.points = ast.literal_eval(self.settings.get('points'))
+            #     self.scalepoints()
+            #     self.redraw_points()
+        else:
+            with open('save.txt', 'w') as file:
+                pass
+
 
     def update_or_write_paths(self,key, value,file_path='save.txt'):
         # Step 1: Read the file

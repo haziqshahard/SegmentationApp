@@ -24,6 +24,7 @@ class App(ctk.CTk):
         ctk.set_default_color_theme(self.theme)
         # self.after(0, lambda:self.state('zoomed'))
         self.settings = {}
+        self.base_path = None
         self.preloadcases()
         
         self.current_slice = 1
@@ -54,21 +55,33 @@ class App(ctk.CTk):
         #Run app 
         self.mainloop()
 
-
     def preloadcases(self):
-        with open("save.txt", 'r') as file:
-            for line in file:
-                # Strip any surrounding whitespace and skip empty lines
-                line = line.strip()
-                if line and '=' in line:
-                    # Split the line into key and value
-                    key, value = line.split('=', 1)
-                    self.settings[key.strip()] = value.strip()
-        if self.settings.get('paths') is not None:
-            self.paths = ast.literal_eval(self.settings.get('paths'))
-            self.base_path = self.paths[0][0]
+        if os.path.exists('save.txt'):
+            with open("save.txt", 'r') as file:
+                for line in file:
+                    # Strip any surrounding whitespace and skip empty lines
+                    line = line.strip()
+                    if line and '=' in line:
+                        # Split the line into key and value
+                        key, value = line.split('=', 1)
+                        self.settings[key.strip()] = value.strip()
+            if self.settings.get('paths') is not None:
+                self.paths = ast.literal_eval(self.settings.get('paths'))
+                self.base_path = self.paths[0][0]
+
+            elif self.settings.get('paths') == None:
+                #Force the user to select a case 
+                self.base_path = filedialog.askdirectory(title="Select the base folder")
+                while self.base_path == '':
+                    self.base_path= filedialog.askdirectory(title="Please select an initial case")
+            
         else:
-            self.base_path = filedialog.askdirectory(title="Select the base folder")
+            with open('save.txt', 'w') as file:
+                pass
+            #Force the user to select an initial case 
+            self.base_path = filedialog.askdirectory(title="Please select an initial case")
+            while self.base_path == '':
+                self.base_path= filedialog.askdirectory(title="Please select an initial case")
 
     def load_images(self):
         """Load time folders and slice files."""
