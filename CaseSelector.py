@@ -62,13 +62,18 @@ class CaseSelector(ctk.CTkFrame):
 
         self.selectedbutton = None
 
+        if self.paths == [] and self.debug == False:
+            self.paths = [self.window.base_path]
+        elif self.paths == [] and self.debug == True:
+            pass
+
         self.preloadcases()
+
         if debug == False:
             idx = self.find_index(self.paths,self.window.base_path)
             self.selectedbutton = self.buttons[idx]
             self.selectedbutton.configure(border_color = "white", border_width=2)
             #Whatever the app's base path is, check the 
-        
 
     def selectcase(self):
         self.base_path = tk.filedialog.askdirectory(title="Select the Case")
@@ -94,14 +99,13 @@ class CaseSelector(ctk.CTkFrame):
                 lines[i] = f"paths={self.paths}\n" # Update the 'paths' value
                 updated = True
                 break
-
         # Step 3: If 'paths' doesn't exist, add it
         if not updated:
-            lines.append(f"paths={[self.paths]}\n")
-
+            lines.append(f"paths={self.paths}\n")
         # Step 4: Write the updated content back to the file
         with open('save.txt', 'w') as file:
             file.writelines(lines)
+        
         if self.debug == False:
             return
         else:
@@ -110,21 +114,38 @@ class CaseSelector(ctk.CTkFrame):
     
     def preloadcases(self):
         #CAN DEPRECATE THIS AS DOING IT IN THE SUPER 
-        with open("save.txt", 'r') as file:
-            for line in file:
-                # Strip any surrounding whitespace and skip empty lines
-                line = line.strip()
-                if line and '=' in line:
-                    # Split the line into key and value
-                    key, value = line.split('=', 1)
-                    self.settings[key.strip()] = value.strip()
-        if self.settings.get('paths') is not None:
-            self.paths = ast.literal_eval(self.settings.get('paths'))
-            for path in self.paths:
-                self.createbutton(path[0])
-            self.renderbuttons()
-        for i in range(0,len(self.paths)):
-            self.markcompleted(i)
+        if os.path.exists("save.txt"):
+            with open("save.txt", 'r') as file:
+                for line in file:
+                    # Strip any surrounding whitespace and skip empty lines
+                    line = line.strip()
+                    if line and '=' in line:
+                        # Split the line into key and value
+                        key, value = line.split('=', 1)
+                        self.settings[key.strip()] = value.strip()
+            if self.settings.get('paths') is not None:
+                self.paths = ast.literal_eval(self.settings.get('paths'))
+                for path in self.paths:
+                    self.createbutton(path[0])
+                self.renderbuttons()
+            else:
+                if self.debug == False:
+                    self.paths = [[self.window.base_path,"notcompleted"]]
+                    self.createbutton(self.window.base_path)
+                    self.renderbuttons()
+                else:
+                    path = tk.filedialog.askdirectory(title="Please select an initial case")
+                    self.paths = [[path, "notcompleted"]]
+                    self.createbutton(path)
+                    self.renderbuttons()
+
+            for i in range(0,len(self.paths)):
+                self.markcompleted(i)
+
+        elif self.debug == True and not os.path.exists('save.txt'):
+            with open('save.txt', 'w') as file:
+                pass
+            self.base_path = tk.filedialog.askdirectory(title="Please select an initial case")
     
     def renderbuttons(self):
         for btn in self.buttons:
