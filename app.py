@@ -15,6 +15,20 @@ from CaseSelector import *
 #Display in the polygon viewer and the view helper (please select a case)
 #Whatever button is clicked in the case viewer, update the base path for both the segmentor and the view helper
 
+"""Have to implement cavity fill
+Segmentor:
+Have to have a new set of points, selectable with middle mouse button
+different polygon fill and different colored dots
+Should be able to select or deselect already existing points to make them cavity points
+Needs to have error checks if points don't exist for this
+
+ViewHelper:
+Now needs to be able to display both the cavity and the myocardium
+Have to be able to toggle either one individually
+Add line width, color and polygon color settings for this too
+"""
+
+
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
