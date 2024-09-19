@@ -1,9 +1,9 @@
 points=[]
-dotcolor=#7885e3
-dothovercolor=#877A1C
-linecolor=#228eff
-linehovercolor=#DD7100
-polygoncolor=(89, 145, 255, 39)
+dotcolor=#377eff
+dothovercolor=#10254c
+linecolor=#3d7cff
+linehovercolor=#12254c
+polygoncolor=(41, 106, 255, 65)
 dotsize=5
 linewidth=2
 smoothing=100

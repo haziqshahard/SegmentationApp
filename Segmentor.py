@@ -24,6 +24,9 @@ class PolygonDrawer(ctk.CTkFrame):
     -TWO MODES:
         Draw mode: Can bring forth previous mask, but does NOT save the current one when switching modes
         Edit mode: Checks to see the existence of segmented, and allows for redrawing and then saving.
+    #OK FINAL THING
+    #The cavity points can only ever be made by switching any already existing points to cavity
+    #Can add them if you want to an already existing line, but otherwise it does nothing
     """
     def __init__(self,window, image_path="", debug=False, row=1, column=0):
         #Defining windows
@@ -165,6 +168,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.bind("<Button-1>", self.on_mouse_down)
         self.canvas.bind("<B1-Motion>", self.do_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
+        self.canvas.bind("<Button-2>", self.switchcavity)
         self.canvas.bind("<Button-3>", self.handle_right_click)
         self.window.bind("<a>", self.on_key_press)
         self.window.bind("<d>", self.on_key_press)
@@ -280,11 +284,29 @@ class PolygonDrawer(ctk.CTkFrame):
         self.slice_files = [sorted([f for f in os.listdir(os.path.join(self.base_path, t)) if os.path.isfile(os.path.join(self.base_path, t, f))]) for t in self.time_folders]
         # print(f"Slice folders found: {len(self.slice_files[0])}") 
 
-    def hex_to_rgb(self,hex):
-        rgb = tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
-        comprgb = tuple(255 - component for component in rgb)
-        comphex = "#{:02X}{:02X}{:02X}".format(comprgb[0], comprgb[1], comprgb[2])
-        return comphex
+    def hextocomp(self,hex):
+        factor = 0.3
+        factor = max(0, min(factor, 1))
+        if isinstance(hex, tuple):
+            r,g,b,a = hex
+            # Calculate the darker color by applying the factor
+            r = int(r * factor)
+            g = int(g * factor)
+            b = int(b * factor)
+
+            return (r,g,b,a)
+        else:
+            # Ensure the factor is between 0 and 1
+            hex = hex.replace(f"#", "")
+            # Convert the hex color to RGB
+            r, g, b = tuple(int(hex[i:i + 2], 16) for i in (0, 2, 4))
+            # Calculate the darker color by applying the factor
+            r = int(r * factor)
+            g = int(g * factor)
+            b = int(b * factor)
+
+            # Convert back to hex
+            return f'#{r:02x}{g:02x}{b:02x}'
 
     def on_resize(self,event):
          #Implemented from https://www.tutorialspoint.com/how-to-set-the-canvas-size-properly-in-tkinter
@@ -333,6 +355,9 @@ class PolygonDrawer(ctk.CTkFrame):
         
         self.scalepoints()
         self.redraw_polygon()
+
+    def switchcavity(self, event):
+        pass
 
     def on_mouse_down(self,event):
         self.event_data["x"]=event.x
@@ -659,7 +684,7 @@ class PolygonDrawer(ctk.CTkFrame):
 
         def assign(e):
             self.dotcolor = e
-            comp = self.hex_to_rgb(e[1:])
+            comp = self.hextocomp(e[1:])
             self.dothovercolor = comp
             self.redraw_points()
                
@@ -695,7 +720,7 @@ class PolygonDrawer(ctk.CTkFrame):
 
         def assign(e):
             self.linecolor = e
-            comp = self.hex_to_rgb(e[1:])
+            comp = self.hextocomp(e[1:])
             self.linehovercolor = comp
             self.redraw_polygon()
                
