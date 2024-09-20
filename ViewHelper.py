@@ -3,11 +3,12 @@ import re
 import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog
-from PIL import Image, ImageTk, ImageDraw
+from PIL import Image, ImageTk, ImageDraw,ImageOps
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from CTkMessagebox import CTkMessagebox
+import ast
 
 class ViewHelper(ctk.CTkFrame):
     """
@@ -57,6 +58,7 @@ class ViewHelper(ctk.CTkFrame):
         self.show_polygon = False
 
         self.points = []
+        self.currentdottags = []
         self.scale_factor = 1
         self.scaledpoints = []
         self.lines=[]
@@ -64,8 +66,7 @@ class ViewHelper(ctk.CTkFrame):
 
         self.line_width = 3
         self.linecolor = "#001C55"
-        self.linehovercolor = "#55DDE0"
-        self.polygoncolor = (0,0,255,int(0.1*255))
+        self.polygoncolor = (0,0,255,int(0.2*255))
 
         # Load base path and images
         if debug==False:
@@ -76,16 +77,43 @@ class ViewHelper(ctk.CTkFrame):
 
         # print(self.base_path)
         self.load_images()
+        self.settings = {}
+        self.load_settings()
 
         # Load the initial image
         self.load_image(self.slice_index, self.time_index)
        
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
         self.context_menu.add_command(label="Toggle Drawn Polygon", command=self.toggle_polygon)
+        self.context_menu.add_command(label="Invert All Folder Masks", command=self.invert_masks)
         # self.context_menu.add_command(label = "Toggle Current Polygon")
         # Bind arrow keys
         self.bind_keys()
         self.root.focus_set()
+
+    def hextocomp(self,hex):
+            factor = 0.3
+            factor = max(0, min(factor, 1))
+            if isinstance(hex, tuple):
+                r,g,b,a = hex
+                # Calculate the darker color by applying the factor
+                r = int(r * factor)
+                g = int(g * factor)
+                b = int(b * factor)
+
+                return (r,g,b,a)
+            else:
+                # Ensure the factor is between 0 and 1
+                hex = hex.replace(f"#", "")
+                # Convert the hex color to RGB
+                r, g, b = tuple(int(hex[i:i + 2], 16) for i in (0, 2, 4))
+                # Calculate the darker color by applying the factor
+                r = int(r * factor)
+                g = int(g * factor)
+                b = int(b * factor)
+
+                # Convert back to hex
+                return f'#{r:02x}{g:02x}{b:02x}'
 
     def update(self):
         self.destroy()
@@ -298,6 +326,50 @@ class ViewHelper(ctk.CTkFrame):
                                  "line" not in self.canvas.gettags(clicked_items[0])):
             self.context_menu.post(event.x_root, event.y_root)
 
+    def invert_masks(self):
+        def invert_images_in_folder(folder_path):
+            # Loop through all files in the specified folder
+            for filename in os.listdir(folder_path):
+                # Construct full file path
+                file_path = os.path.join(folder_path, filename)
+                
+                # Check if the file is an image (you can add more extensions if needed)
+                if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+                    try:
+                        # Open the image
+                        with Image.open(file_path) as img:
+                            # Invert the image colors
+                            inverted_image = ImageOps.invert(img.convert("L"))
+                            
+                            # Save the inverted image back to the original file
+                            inverted_image.save(file_path)
+                            
+                        # print(f"Inverted and saved: {filename}")
+                    except Exception as e:
+                        print(f"Could not process {filename}: {e}")
+        
+        invert_images_in_folder(os.path.dirname(self.mask_path))
+        CTkMessagebox(master=self.window, message=f"Successfully inverted all images in {os.path.dirname(self.mask_path)}")
+    
+    def load_settings(self):
+        if os.path.exists('save.txt'):
+            with open("save.txt", 'r') as file:
+                for line in file:
+                    # Strip any surrounding whitespace and skip empty lines
+                    line = line.strip()
+                    if line and '=' in line:
+                        # Split the line into key and value
+                        key, value = line.split('=', 1)
+                        self.settings[key.strip()] = value.strip()
+            if self.settings.get('linecolor') is not None:
+                self.linecolor = self.settings.get('linecolor')
+            if self.settings.get('polygoncolor') is not None:
+                try:
+                    self.polygoncolor = ast.literal_eval(self.settings.get('polygoncolor'))
+                except:
+                    self.polygoncolor = None
+
+
     def toggle_polygon(self):
         #check if the segmented mask even exists
         if self.show_polygon:
@@ -324,10 +396,16 @@ class ViewHelper(ctk.CTkFrame):
                         lowest_item_id = self.canvas.find_all()[1]
                         self.canvas.tag_lower(self.polytag, lowest_item_id)
                     for i in range(len(self.scaledpoints) - 1):
-                        line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)
+                        if "cavity" in self.currentdottags[i] and "cavity" in self.currentdottags[i+1]:
+                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
+                        else:
+                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
                         self.lines.append(line)
                     if len(self.points) > 2 and self.points[0] != self.points[-1]:
-                        line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)
+                        if "cavity" in self.currentdottags[-1] and "cavity" in self.currentdottags[0]:
+                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
+                        else:
+                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
                         self.lines.append(line)
         else:
             self.delete_polygon()
@@ -337,15 +415,27 @@ class ViewHelper(ctk.CTkFrame):
                     self.canvas.delete(line)
         if self.polytag is not None:
             self.canvas.delete(self.polytag)    
-               
+                  
     def PILdrawpoly(self):
+        # print(self.currentdottags)
+        if len(self.currentdottags) >2:
+            dottags = self.currentdottags
+            # print(f"Switched tags:{dottags}")
+        #If cavity is present in the tag, get the index and then take it from self.scaledpoints
+
+        cavidx = [index for index, tup in enumerate(dottags) if "cavity" in tup]
+        cavitypoints = [self.scaledpoints[i] for i in cavidx]
+
         overlay = Image.new('RGBA', (self.current_width, self.current_height), (255,255,255,0))
         draw = ImageDraw.Draw(overlay)
         #Draw the polygon on the image
         draw.polygon(self.scaledpoints, fill = self.polygoncolor)
+        if len(cavitypoints)>2:
+            draw.polygon(cavitypoints, fill=self.hextocomp(self.polygoncolor))
+
         # Display the result on the canvas
-        self.polygon = ImageTk.PhotoImage(overlay)    
-    
+        self.polygon = ImageTk.PhotoImage(overlay)
+
     def updateimage(self, slice_index, time_index):
         time_folder = self.time_folders[time_index]
         slice_file = self.slice_files[time_index][slice_index]
@@ -375,10 +465,9 @@ class ViewHelper(ctk.CTkFrame):
     def masktopoints(self,maskpath):
         # Load the PNG image as a grayscale image (0 means grayscale mode)
         binary_mask = cv2.imread(maskpath, cv2.IMREAD_GRAYSCALE)
-        binary_mask = cv2.bitwise_not(binary_mask)
-        # Assuming 'binary_mask' is your binary mask as a numpy array
-        # Find contours in the binary mask
-        contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        myocard_mask = binary_mask.copy()
+        myocard_mask[myocard_mask==127] = 0 
+        contours, _ = cv2.findContours(myocard_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
         # Get the first contour (assuming you only have one object)
         boundary_points = contours[0]  # (N, 1, 2) array representing x, y coordinates
@@ -389,6 +478,25 @@ class ViewHelper(ctk.CTkFrame):
         self.points = [tuple(arr.flatten()) for arr, in boundary_points]
         if len(self.points) != 0:
             self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
+        self.currentdottags = [("dot",)] * len(self.points)
+
+        def check_cavity_around_point(center, radius,image=binary_mask):
+            # Create a mask with the same size as the image, initialized to zeros
+            mask = np.zeros(image.shape[:2], dtype=np.uint8)
+
+            # Draw a filled circle on the mask
+            cv2.circle(mask, center, radius, 255, thickness=-1)
+
+            # Use the mask to get the region of interest from the image
+            circular_patch = cv2.bitwise_and(image, image, mask=mask)
+
+            # Check if any pixel in the circular patch has the value of 127
+            return np.any(circular_patch == 127)
+
+        for i in range(len(self.points)):
+            if check_cavity_around_point(self.points[i], 4):
+                #Set the tag to be "dot","cavity"
+                self.currentdottags[i] = ("dot","cavity")
 
 # Create the main window
 if __name__ == "__main__":

@@ -24,9 +24,11 @@ class PolygonDrawer(ctk.CTkFrame):
     -TWO MODES:
         Draw mode: Can bring forth previous mask, but does NOT save the current one when switching modes
         Edit mode: Checks to see the existence of segmented, and allows for redrawing and then saving.
-    #OK FINAL THING
-    #The cavity points can only ever be made by switching any already existing points to cavity
-    #Can add them if you want to an already existing line, but otherwise it does nothing
+    Features:
+    Have to have a new set of points, selectable with middle mouse button
+    different polygon fill and different colored dots
+    Should be able to select or deselect already existing points to make them cavity points
+    Needs to have error checks if points don't exist for this   
     """
     def __init__(self,window, image_path="", debug=False, row=1, column=0):
         #Defining windows
@@ -81,7 +83,9 @@ class PolygonDrawer(ctk.CTkFrame):
         self.original_width = self.pilimage.width
         self.original_height = self.pilimage.height
         self.points = []
-        self.switchpoints = []
+        self.switchpoints = [] #Surely smarter way to write this
+        self.switchdots = []
+        self.currentdottags = []
 
         self.aspect_ratio = self.original_width/self.original_height
         #Create Canvas
@@ -168,8 +172,9 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.bind("<Button-1>", self.on_mouse_down)
         self.canvas.bind("<B1-Motion>", self.do_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
-        self.canvas.bind("<Button-2>", self.switchcavity)
         self.canvas.bind("<Button-3>", self.handle_right_click)
+        self.canvas.bind("<Button-2>", self.switchplacecavity)
+
         self.window.bind("<a>", self.on_key_press)
         self.window.bind("<d>", self.on_key_press)
         self.window.bind("<A>", self.on_key_press)
@@ -181,6 +186,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.current_width = self.canvas.winfo_width()
         self.current_height = self.canvas.winfo_height()
         self.scaledpoints = []
+        self.scaledcavity = []
 
         #-------VARIABLES-------
         self.scale_factor = 1.0
@@ -356,9 +362,6 @@ class PolygonDrawer(ctk.CTkFrame):
         self.scalepoints()
         self.redraw_polygon()
 
-    def switchcavity(self, event):
-        pass
-
     def on_mouse_down(self,event):
         self.event_data["x"]=event.x
         self.event_data["y"] = event.y
@@ -416,8 +419,10 @@ class PolygonDrawer(ctk.CTkFrame):
 
                     self.event_data["x"] = event.x
                     self.event_data["y"] = event.y
-
-                    self.redraw_polygon() 
+                    if self.current_mode == "Draw":
+                        self.redraw_polygon() 
+                    else:
+                        self.redraw_polygon("switched")
                     #Cannot redraw all the points, as stops the dragging motion
                 elif self.event_data["type"] == "line":
                     #Move all dots together then just redraw everything
@@ -432,7 +437,7 @@ class PolygonDrawer(ctk.CTkFrame):
                         # self.canvas.move(self.dots[i], dx, dy)
                         old_x, old_y = self.scaledpoints[i]
                         ogold_x, ogold_y = self.points[i]
-                        self.points[i] = (ogold_x + dx/self.scale_factor, ogold_y + dy/self.scale_factor)
+                        self.points[i] = (ogold_x + dx/self.scale_factor, ogold_y + dy/self.scale_factor) 
                         self.scaledpoints[i] = (self.points[i][0]*self.scale_factor,self.points[i][1]*self.scale_factor)
 
                         # ogold_x, ogold_y = self.points[i]
@@ -464,6 +469,26 @@ class PolygonDrawer(ctk.CTkFrame):
         self.checkswitchpoints()
         self.updateimage(self.slice_index, self.time_index)
 
+    def switchplacecavity(self,event):
+        x,y = event.x, event.y #Collect coords of event based on the current scale
+        clicked_items = self.canvas.find_withtag("current")
+
+        coords = (x,y)
+
+        if clicked_items and "dot" in self.canvas.gettags(clicked_items[0]):
+            if "cavity" in self.canvas.gettags(clicked_items[0]):
+                self.canvas.itemconfig(clicked_items[0], tags=("dot","myocardium"))         
+                #Have to remove it from the scaledcavitypoints, then 
+            elif "myocardium" in self.canvas.gettags(clicked_items[0]):
+                self.canvas.itemconfig(clicked_items[0], tags=("dot","cavity"))
+        if clicked_items and "line" in self.canvas.gettags(clicked_items[0]):
+            self.pointbtwline(event,clicked_items[0], type="cavity")
+        elif clicked_items == False:
+            # self.add_point(event,type="cavity")
+            # Dont do anything
+            return
+        self.currentdottags = [self.canvas.gettags(dot) for dot in self.dots]
+        self.redraw_polygon()
 
     def updateimage(self, slice_index, time_index):
         self.current_slice = slice_index +1
@@ -497,16 +522,21 @@ class PolygonDrawer(ctk.CTkFrame):
 
     def updateswitchpoints(self):
         exists = any(entry[0] == self.slice_index for entry in self.switchpoints)
+        #If the current slice exists in the switchpoints, redraw it only if in draw
         if self.current_mode == "Draw":
             if self.points != []:
                 if exists:
                     index = [i for i, entry in enumerate(self.switchpoints) if entry[0] == self.slice_index][0]                
                     self.switchpoints[index][1] = self.points
+                    self.switchdots[index][1] = [self.canvas.gettags(dot) for dot in self.dots]
                     # print(f"updating switch points for {self.slice_index}")
                 else:
                     # print(f"adding switch points for {self.slice_index}: {self.points}")
                     self.switchpoints.append([self.slice_index, self.points])
+                    self.switchdots.append([self.slice_index,[self.canvas.gettags(dot) for dot in self.dots]])
                 self.points = []
+                self.currentdottags = []
+                # self.cavitypoints = []
                 self.scalepoints()
                 self.redraw_polygon()
                 self.redraw_points()
@@ -519,14 +549,17 @@ class PolygonDrawer(ctk.CTkFrame):
             index = [i for i, entry in enumerate(self.switchpoints) if entry[0] == self.slice_index][0]
             # print(self.switchpoints)
             self.points = self.switchpoints[index][1]
+            self.currentdottags = self.switchdots[index][1]
+            #Have to pass the dot tags as well, that way can just check what the tags are and redraw
             self.scalepoints()
-            self.redraw_polygon()
-            self.redraw_points()
+            self.redraw_polygon("switched")
+            self.redraw_points("switched")
 
     #----------POINT ACTIONS----------
-    def draw_point(self,x,y):
+    def draw_point(self,x,y, type="myocardium"):
         dot_size = self.dot_size * self.scale_factor
-        dot = self.canvas.create_oval(x-dot_size, y-dot_size, x+dot_size, y+dot_size, fill=self.dotcolor, tags="dot")
+        fill = self.dotcolor if type == "myocardium" else self.hextocomp(self.dotcolor)
+        dot = self.canvas.create_oval(x-dot_size, y-dot_size, x+dot_size, y+dot_size, fill=fill, tags=("dot",type))
 
         # Bind hover events to the dot
         self.canvas.tag_bind(dot, "<Enter>", lambda e, d=dot: self.on_hover_enter(e, d))
@@ -541,22 +574,21 @@ class PolygonDrawer(ctk.CTkFrame):
     
     def scalepoints(self):
         self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
-   
-    def add_point(self,event):
-        #ISSUE IS HERE SOMEWHERE DOUBLE CHECK
+
+    def add_point(self,event,type="myocardium"):
         x,y = event.x, event.y #Collect coords of event based on the current scale
+        # if type == "myocardium":
         self.points.append((x/self.scale_factor, y/self.scale_factor)) #Coords of events based on the original scale
         self.scalepoints()        
+
+        dot=self.draw_point(x,y,type=type)
+        self.dots.append(dot) #Collecting the dot tags
+        self.redraw_points()#Elevate all the points to the top
         self.redraw_polygon()
 
-        dot=self.draw_point(x,y)
-        self.dots.append(dot) #Collecting the dot tagsx
-        self.redraw_points()#Elevate all the points to the top
-
-    def pointbtwline(self, event, line):
+    def pointbtwline(self, event, line, type="myocardium"):
         # Get the exact coordinates where the user clicked
         new_x, new_y = event.x, event.y
-        
         # Get the coordinates of the line
         coords = self.canvas.coords(line)
         x1, y1, x2, y2 = coords
@@ -575,10 +607,17 @@ class PolygonDrawer(ctk.CTkFrame):
         # Remove the old line since it will be replaced by two new lines
         self.canvas.delete(line)
         self.lines.pop(line_index)
+
+        if type=="myocardium":
+            linetags = ("line","myocardium")
+            linefill = self.linecolor
+        elif type=="cavity":
+            linetags = ("line","cavity")
+            linefill = self.hextocomp(self.linecolor)
         
         # Create two new lines: one from the first point to the new dot, and another from the new dot to the second point
-        line1 = self.canvas.create_line(x1, y1, new_x, new_y, fill=self.linecolor, tags="line", width=self.line_width*self.scale_factor)
-        line2 = self.canvas.create_line(new_x, new_y, x2, y2, fill=self.linecolor, tags="line", width=self.line_width*self.scale_factor)
+        line1 = self.canvas.create_line(x1, y1, new_x, new_y, fill=linefill, tags=linetags, width=self.line_width*self.scale_factor)
+        line2 = self.canvas.create_line(new_x, new_y, x2, y2, fill=linefill, tags=linetags, width=self.line_width*self.scale_factor)
         
         # Insert the new lines into the lines list at the correct positions
         self.lines.insert(line_index, line1)
@@ -591,23 +630,36 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.tag_bind(line2, "<Leave>", lambda e, l=line2: self.on_line_hover_leave(e, l))
         
         # Draw the new dot at the clicked position
-        dot = self.draw_point(new_x, new_y)
+        dot = self.draw_point(new_x, new_y,type=type)
         self.dots.insert(end_point_index, dot)
         # Ensure that dots are always on top
         for dot in self.dots:
             self.canvas.tag_raise(dot)
 
-    def redraw_points(self):
+    def redraw_points(self,mode=""):
+        if mode == "switched":
+            dottags = self.currentdottags
+            # print(f"Switched tags:{dottags}")
+        else:
+            dottags = []
+            for dot in self.dots:
+                dottags.append(self.canvas.gettags(dot))
+
         # Clear existing dots
         for dot in self.dots:
             self.canvas.delete(dot)
         self.dots.clear()
 
         # Draw the dots based on the scaled points list
-        for (x, y) in self.scaledpoints:
-            dot = self.draw_point(x, y)
+        for i in range(len(self.scaledpoints)):
+            tags = dottags[i]
+            x,y = self.scaledpoints[i]
+            if "cavity" in tags:
+                dot=self.draw_point(x,y,"cavity")
+            else:
+                dot=self.draw_point(x,y)
             self.dots.append(dot)
-        
+
         # Ensure that dots are always on top
         for dot in self.dots:
             self.canvas.tag_raise(dot)
@@ -703,7 +755,7 @@ class PolygonDrawer(ctk.CTkFrame):
         redrawWindow.grab_set()
 
         self.sliders(self,redrawWindow, "numpoints", "Number of Redraw Points: ", (50,100), 0)
-        self.sliders(self,redrawWindow, "smoothing", "Smoothing Value: ", (50,200),1)
+        self.sliders(self,redrawWindow, "smoothing", "Smoothing Value: ", (20,200),1)
     
     def line_settings(self):
         """Expected settings to change for line:
@@ -735,7 +787,7 @@ class PolygonDrawer(ctk.CTkFrame):
                                  "line" not in self.canvas.gettags(clicked_items[0])):
             self.context_menu.post(event.x_root, event.y_root)
 
-    def redraw_polygon(self):
+    def redraw_polygon(self,mode=""):
         """This connects all dots present and draws the polygon contained within"""
         #Clear existing lines and polygons
         for line in self.lines:
@@ -746,21 +798,45 @@ class PolygonDrawer(ctk.CTkFrame):
             self.canvas.delete(self.polygon)
         self.polygon = None
 
+        if mode == "switched":
+            dottags = self.currentdottags
+            # print(f"Switched tags:{dottags}")
+        else:
+            dottags = []
+            for dot in self.dots:
+                dottags.append(self.canvas.gettags(dot))
+            # print(f"Unswitched tags:{dottags}")
+
         # Draw lines between points
         if len(self.scaledpoints) > 1:
+            #Drawing the polygon
             if len(self.scaledpoints) > 2:
                 self.PILdrawpoly()
                 poly = self.canvas.create_image(0, 0, image=self.polygon, anchor=tk.NW)
                 lowest_item_id = self.canvas.find_all()[1]
                 self.canvas.tag_lower(poly, lowest_item_id)
+
+            #Draw the lines
             for i in range(len(self.scaledpoints) - 1):
-                line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)
+                try:
+                    if "cavity" in dottags[i] and "cavity" in dottags[i+1]:
+                        line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
+                    else:
+                        line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
+                except IndexError:
+                    print(f"Dottags Length:{len(dottags)}")
+                    print(f"Index attempted:{[i,i+1]}")
+                    print(f"{dottags[i+1]}")
+
                 self.lines.append(line)
                 # Bind hover events to the line
                 self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
                 self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))   
             if len(self.points) > 2 and self.points[0] != self.points[-1]:
-                line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)
+                if "cavity" in dottags[-1] and "cavity" in dottags[0]:
+                    line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
+                else:
+                    line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
                 self.lines.append(line)
                 self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
                 self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))
@@ -768,10 +844,26 @@ class PolygonDrawer(ctk.CTkFrame):
             self.canvas.tag_raise(dot)
 
     def PILdrawpoly(self):
+        if len(self.currentdottags) >2:
+            dottags = self.currentdottags
+            # print(f"Switched tags:{dottags}")
+        else:
+            dottags = []
+            for dot in self.dots:
+                dottags.append(self.canvas.gettags(dot))
+            # print(f"Unswitched tags:{dottags}")
+        
+        #If cavity is present in the tag, get the index and then take it from self.scaledpoints
+
+        cavidx = [index for index, tup in enumerate(dottags) if "cavity" in tup]
+        cavitypoints = [self.scaledpoints[i] for i in cavidx]
+
         overlay = Image.new('RGBA', (self.current_width, self.current_height), (255,255,255,0))
         draw = ImageDraw.Draw(overlay)
         #Draw the polygon on the image
         draw.polygon(self.scaledpoints, fill = self.polygoncolor)
+        if len(cavitypoints)>2:
+            draw.polygon(cavitypoints, fill=self.hextocomp(self.polygoncolor))
 
         # Display the result on the canvas
         self.polygon = ImageTk.PhotoImage(overlay)
@@ -796,29 +888,116 @@ class PolygonDrawer(ctk.CTkFrame):
             mask = Image.new('L', self.pilimage.size, 0)
             draw = ImageDraw.Draw(mask)
             # print(self.points)
+            cavity = False
 
-            x=[point[0] for point in self.points]
-            y=[point[1] for point in self.points]
-
-            # Add the first point to the end to close the loop
-            x.append(x[0])
-            y.append(y[0])
-
-            # Prepare the points for smoothing using splprep
-            tck, u = splprep([x, y], s=1, per=True)
-
-            # Generate smooth points along the curve
-            #ALLOW FOR THE SMOOTHNESS VALUE TO BE DECIDED?
-            u_new = np.linspace(0, 1, self.smoothing)
-            x_smooth, y_smooth = splev(u_new, tck)
-
-            # Combine smoothed x and y points into coordinates
-            smooth_coords = list(zip(x_smooth, y_smooth))
-
-            draw.polygon(smooth_coords, outline=1, fill=255)
-            mask = ImageOps.invert(mask)
+            dottags = []
+            for dot in self.dots:
+                dottags.append(self.canvas.gettags(dot))
             
-            if self.current_mode == "Draw":
+            # Generate smooth points along the curve
+            u_new = np.linspace(0, 1, self.smoothing)
+            #If cavity is present in the tag, get the index and then take it from self.scaledpoints
+            cavidx = [index for index, tup in enumerate(dottags) if "cavity" in tup]
+            if len(cavidx) >2:
+                cavitypoints = [self.points[i] for i in cavidx]
+                cavitypointsnp = np.array(cavitypoints)
+                unsmoothed_points = cavitypointsnp[[0,-1]]
+                middle_points = cavitypointsnp[1:-1]
+
+                # Perform smoothing on the middle points
+                tck, u = splprep(middle_points.T, s=0)
+                smoothed_middle_points = np.array(splev(np.linspace(0, 1, self.smoothing), tck)).T
+
+                # Combine unsmoothed and smoothed points, ensuring the two unsmoothed points stay connected by a straight line
+                all_points = np.vstack([unsmoothed_points[0], smoothed_middle_points, unsmoothed_points[1]])
+
+                # Close the polygon by adding the first unsmoothed point at the end
+                all_points_closed = np.vstack([all_points, unsmoothed_points[0]])
+                smoothcav_coords = [tuple(point) for point in all_points_closed]
+
+                def get_centroid(points):
+                    x_coords = [p[0] for p in points]
+                    y_coords = [p[1] for p in points]
+                    return (sum(x_coords) / len(points), sum(y_coords) / len(points))
+
+                # Function to calculate the distance between two points
+                def distance(point1, point2):
+                    return np.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
+
+                # Function to expand a polygon by a fixed number of pixels
+                def expand_polygon(points, pixel_expansion):
+                    centroid = get_centroid(points)
+                    
+                    # Create a new set of vertices, each one moved outward by the given number of pixels
+                    new_points = []
+                    for point in points:
+                        # Calculate the vector from the centroid to the point
+                        vector = (point[0] - centroid[0], point[1] - centroid[1])
+                        
+                        # Normalize the vector
+                        vector_length = distance(centroid, point)
+                        if vector_length != 0:
+                            unit_vector = (vector[0] / vector_length, vector[1] / vector_length)
+                        else:
+                            unit_vector = (0, 0)
+                        
+                        # Expand the point by the fixed number of pixels along the direction of the unit vector
+                        new_point = (
+                            point[0] + unit_vector[0] * pixel_expansion, 
+                            point[1] + unit_vector[1] * pixel_expansion
+                        )
+                        new_points.append(new_point)
+                    
+                    return new_points
+                
+                smoothcav_coords = expand_polygon(smoothcav_coords, 2)
+                cavity = True
+            else:
+                CTkMessagebox(master=self.window, message="Too few Cavity points selected, please add more",icon="warning")
+
+            #Drawing myocardium
+            pointsnp = np.array(self.points)
+            tck,u = splprep(pointsnp.T, s=0)
+            smoothedmyopoints = np.array(splev(u_new, tck)).T
+            smoothmyocoords = [tuple(point) for point in smoothedmyopoints]
+
+            # Create two separate masks for the two polygons
+            myo_mask = Image.new("L", self.pilimage.size, 0)
+            cav_mask = Image.new("L", self.pilimage.size, 0)
+            
+            # Draw the polygons on their respective masks
+            myo_draw = ImageDraw.Draw(myo_mask)
+            cav_draw = ImageDraw.Draw(cav_mask)
+            
+            myo_draw.polygon(smoothmyocoords, fill=255)
+            cav_draw.polygon(smoothcav_coords, fill=127)
+
+            # Combine the masks and handle overlap
+            image_size = self.pilimage.size
+            for x in range(image_size[0]):
+                for y in range(image_size[1]):
+                    myo_value = myo_mask.getpixel((x, y))
+                    cav_value = cav_mask.getpixel((x, y))
+                    
+                    if cav_value == 127 and myo_value == 255:
+                        # Overlap detected, set to 127
+                        draw.point((x, y), fill=255)
+                    elif cav_value == 127:
+                        # Non-overlapping cavity region
+                        draw.point((x, y), fill=127)
+                    elif myo_value == 255:
+                        # Non-overlapping myo region
+                        draw.point((x, y), fill=255)
+
+            # mask.show()  # Display the visualization image
+            # mask.show()
+            
+            if self.debug == True:
+                impath = "mask.png"
+                mask.save(impath)
+                CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
+
+            if self.current_mode == "Draw" and self.debug==False:
                 folder_path = os.path.dirname(self.image_path) + "/segmented"
                 if not os.path.exists(folder_path):
                     os.makedirs(folder_path)  # Creates folder and intermediate directories if they don't exist
@@ -831,7 +1010,7 @@ class PolygonDrawer(ctk.CTkFrame):
                 CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
                 # = ctk.CTkLabel(master=self.savedialog, text=f"Image saved to {impath}", font=('TkDefaultFont',self.fontsize))
                 # self.label.grid(row=0, column=0,padx=5, pady=5)
-            elif self.current_mode == "Edit":
+            elif self.current_mode == "Edit" and self.debug == False:
                 folder = os.path.dirname(self.image_path) + "/segmented"
                 segmentedslice = folder + f"/Segmented Slice{self.current_slice:03d}.png"
 
@@ -890,10 +1069,6 @@ class PolygonDrawer(ctk.CTkFrame):
                 self.smoothing =int(self.settings.get('smoothing'))
             if self.settings.get('numpoints') is not None:
                 self.numpoints =int(self.settings.get('numpoints'))
-            # if self.settings.get('points') is not None:
-            #     self.points = ast.literal_eval(self.settings.get('points'))
-            #     self.scalepoints()
-            #     self.redraw_points()
         else:
             with open('save.txt', 'w') as file:
                 pass
@@ -965,9 +1140,8 @@ class PolygonDrawer(ctk.CTkFrame):
             if os.path.exists(folder):
                 if os.path.exists(segmentedslice):
                     self.masktopoints(segmentedslice)    
-                    self.redraw_points()
-                    self.redraw_polygon()     
-
+                    self.redraw_points("switched")
+                    self.redraw_polygon("switched")     
                 else:
                     CTkMessagebox(message=f"Slice{self.current_slice:03d} at time{self.current_time:03d} does not have segmentations",icon="cancel")
                     self.toggle_mode()
@@ -979,17 +1153,40 @@ class PolygonDrawer(ctk.CTkFrame):
         #User has to be able to move to the next time and slice and maintain the previous information
 
     def masktopoints(self,maskpath):
+        # Load the PNG image as a grayscale image (0 means grayscale mode)
         binary_mask = cv2.imread(maskpath, cv2.IMREAD_GRAYSCALE)
-        binary_mask = cv2.bitwise_not(binary_mask)
-        contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        # Get the first contour (assuming only one object)
+        myocard_mask = binary_mask.copy()
+        myocard_mask[myocard_mask==127] = 0 
+        contours, _ = cv2.findContours(myocard_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        # Get the first contour (assuming you only have one object)
         boundary_points = contours[0]  # (N, 1, 2) array representing x, y coordinates
 
-        step = len(boundary_points)//self.numpoints
+        numpoints = 30
+        step = len(boundary_points)//numpoints
         boundary_points = boundary_points[::step]
         self.points = [tuple(arr.flatten()) for arr, in boundary_points]
         if len(self.points) != 0:
             self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
+        self.currentdottags = [("dot",)] * len(self.points)
+
+        def check_cavity_around_point(center, radius,image=binary_mask):
+            # Create a mask with the same size as the image, initialized to zeros
+            mask = np.zeros(image.shape[:2], dtype=np.uint8)
+
+            # Draw a filled circle on the mask
+            cv2.circle(mask, center, radius, 255, thickness=-1)
+
+            # Use the mask to get the region of interest from the image
+            circular_patch = cv2.bitwise_and(image, image, mask=mask)
+
+            # Check if any pixel in the circular patch has the value of 127
+            return np.any(circular_patch == 127)
+
+        for i in range(len(self.points)):
+            if check_cavity_around_point(self.points[i], 4):
+                #Set the tag to be "dot","cavity"
+                self.currentdottags[i] = ("dot","cavity")
 
     def previous_poly(self):
         #Check if the previous slice(so long as its slice2) has a segmentation
@@ -999,23 +1196,35 @@ class PolygonDrawer(ctk.CTkFrame):
             if os.path.exists(folder):
                 if os.path.exists(segmentedslice):
                     self.masktopoints(segmentedslice)    
-                    self.redraw_polygon()     
-                    self.redraw_points()
+                    self.redraw_polygon("switched")     
+                    self.redraw_points("switched")
         else:
             CTkMessagebox(message="There is no previous slice!", icon="warning")
 
     #----------HOVER EVENTS----------
     def on_hover_enter(self, event, dot):
-        self.canvas.itemconfig(dot, fill=self.dothovercolor)
+        if "myocardium" in self.canvas.gettags(dot):
+            self.canvas.itemconfig(dot, fill=self.dothovercolor)
+        elif "cavity" in self.canvas.gettags(dot):
+            self.canvas.itemconfig(dot, fill=self.hextocomp(self.dothovercolor))
     
     def on_hover_leave(self, event, dot):
-        self.canvas.itemconfig(dot, fill=self.dotcolor)
-
+        if "myocardium" in self.canvas.gettags(dot):
+            self.canvas.itemconfig(dot, fill=self.dotcolor)
+        elif "cavity" in self.canvas.gettags(dot):
+            self.canvas.itemconfig(dot, fill=self.hextocomp(self.dotcolor))
+    
     def on_line_hover_enter(self, event, line):
-        self.canvas.itemconfig(line, fill=self.linehovercolor)
+        if "cavity" in self.canvas.gettags(line):
+            self.canvas.itemconfig(line, fill=self.hextocomp(self.hextocomp(self.linehovercolor)))
+        else:
+            self.canvas.itemconfig(line, fill=self.hextocomp(self.linecolor))      
 
     def on_line_hover_leave(self, event, line):
-        self.canvas.itemconfig(line, fill=self.linecolor)
+        if "cavity" in self.canvas.gettags(line):
+            self.canvas.itemconfig(line, fill=self.hextocomp(self.linecolor))
+        else:
+            self.canvas.itemconfig(line, fill=self.linecolor)        
 
 if __name__ == "__main__":
        root=ctk.CTk()
