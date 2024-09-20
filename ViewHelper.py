@@ -89,10 +89,10 @@ class ViewHelper(ctk.CTkFrame):
         # self.context_menu.add_command(label = "Toggle Current Polygon")
         # Bind arrow keys
         self.bind_keys()
-        self.root.focus_set()
+        self.window.focus_set()
 
     def hextocomp(self,hex):
-            factor = 0.3
+            factor = 0.6
             factor = max(0, min(factor, 1))
             if isinstance(hex, tuple):
                 r,g,b,a = hex
@@ -117,7 +117,8 @@ class ViewHelper(ctk.CTkFrame):
 
     def update(self):
         self.destroy()
-        ViewHelper(self.window, row=0, column=1)
+        self.window.viewhelper = ViewHelper(self.window, row=0, column=1)
+
     def load_images(self):
         """Load time folders and slice files."""
         # Regular expression to match time folders in the format time001, time002, etc.
@@ -244,11 +245,12 @@ class ViewHelper(ctk.CTkFrame):
     def bind_keys(self):
         self.window.bind("<Configure>", self.on_resize)
 
-        """Bind arrow keys to the widget."""
-        self.window.bind("<Right>", self.on_key_press)
-        self.window.bind("<Left>", self.on_key_press)
-        self.window.bind("<Up>", self.on_key_press)
-        self.window.bind("<Down>", self.on_key_press)
+        if self.debug == True:
+            """Bind arrow keys to the widget."""
+            self.window.bind("<Right>", self.on_key_press)
+            self.window.bind("<Left>", self.on_key_press)
+            self.window.bind("<Up>", self.on_key_press)
+            self.window.bind("<Down>", self.on_key_press)
 
         self.canvas.bind("<Button-3>", self.handle_right_click)
 
@@ -303,6 +305,7 @@ class ViewHelper(ctk.CTkFrame):
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
 
         self.updateimage(self.slice_index, self.time_index)
+        
         self.mask_path = self.base_path + "/time{time:03}/segmented/Segmented Slice{slice:03}.png".format(time=self.time_index+1, slice=self.slice_index+1)
         # print(self.time_index, self.slice_index)
         if self.show_polygon:
@@ -363,6 +366,8 @@ class ViewHelper(ctk.CTkFrame):
                         self.settings[key.strip()] = value.strip()
             if self.settings.get('linecolor') is not None:
                 self.linecolor = self.settings.get('linecolor')
+            if self.settings.get('numpoints') is not None:
+                self.numpoints = 2*int(self.settings.get('numpoints'))
             if self.settings.get('polygoncolor') is not None:
                 try:
                     self.polygoncolor = ast.literal_eval(self.settings.get('polygoncolor'))
@@ -472,7 +477,7 @@ class ViewHelper(ctk.CTkFrame):
         # Get the first contour (assuming you only have one object)
         boundary_points = contours[0]  # (N, 1, 2) array representing x, y coordinates
 
-        numpoints = 30
+        numpoints = self.numpoints
         step = len(boundary_points)//numpoints
         boundary_points = boundary_points[::step]
         self.points = [tuple(arr.flatten()) for arr, in boundary_points]

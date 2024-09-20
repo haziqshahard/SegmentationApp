@@ -3,23 +3,24 @@ import customtkinter as ctk
 import os
 from CTkMessagebox import CTkMessagebox
 import ast
-
+import webbrowser
 class CaseSelector(ctk.CTkFrame):
     """Window that enables the user to select cases by opening the folders
     Window then saves the file path and displays it.
     Goes into save.txt with all the case files so that when it is next opened, can just be clicked and it will appear
     """
-    def __init__(self, window, debug=False, row=1, column=0):
+    def __init__(self, window, debug=False, row=1, column=0, theme="blue"):
         super().__init__(window)
         self.debug = debug
         self.window = window
         self.window.title("Case Selector")
         self.window.protocol("WM_DELETE_WINDOW", self.savecases)
+
         ctk.set_appearance_mode("dark")
-        if self.debug == False:
-            ctk.set_default_color_theme(self.window.theme)  # Other themes: "blue", "green"
-        else:
-            ctk.set_default_color_theme("blue")
+        # if self.debug == False:
+        #     ctk.set_default_color_theme(self.window.theme)  # Other themes: "blue", "green"
+        # else:
+        ctk.set_default_color_theme(theme)
         self.fontsize = 15
         self.font = 'Helvetica'
         self.settings = {}
@@ -36,7 +37,7 @@ class CaseSelector(ctk.CTkFrame):
 
         if debug==False:
             # self.root.configure(height=300)
-            self.root.grid(row=row, column=column, columnspan=2,  sticky="nsew")
+            self.root.grid(row=row, column=column, columnspan=1,  sticky="nsew")
         else:
             self.root.grid(row=0, column=0, sticky="nsew")
 
@@ -55,6 +56,25 @@ class CaseSelector(ctk.CTkFrame):
         self.buttons = []
 
         btn = ctk.CTkButton(master=self.root,text="Select Case", command=self.selectcase, font=(self.font,self.fontsize*self.scale_factor))
+
+        def open_url(url):
+            webbrowser.open_new(url)
+        link = ctk.CTkLabel(self.root, 
+                            text="By: Haziq Shahard", 
+                            text_color="#696969", 
+                            cursor="hand2", font=("Helvetica", 14) 
+                            )
+        # Bind the label to the open_url function
+        link.bind("<Button-1>", lambda e: open_url("https://github.com/haziqshahard/SegmentationApp"))
+        link.grid(row=1, column=0, padx=10, pady=10, sticky="sw")
+        def on_enter(event):
+            link.configure(text_color="#878787")  # Change text color on hover
+        def on_leave(event):
+            link.configure(text_color="#696969")  # Reset text color when not hovering
+        
+        link.bind("<Enter>", on_enter)
+        link.bind("<Leave>", on_leave)
+        
         self.fg_color = getattr(btn, "_fg_color")
         self.hover_color = getattr(btn, "_hover_color")
         self.originalborder = btn.cget("border_color")  
@@ -232,14 +252,14 @@ class CaseSelector(ctk.CTkFrame):
             self.window.base_path = self.paths[pathidx][0]
             image_path = os.path.join(self.window.base_path, "time001", 'slice001time001.png')
             self.window.image_path = image_path.replace('\\', '/')
+            
             self.window.segmentor.update()
             self.window.viewhelper.update()
+            self.window.maskviewer.update()
         elif self.debug == True:
             print(self.paths[pathidx][0])
         self.selectedbutton = button
-    
-       
-
+        
 if __name__ == "__main__":
     root=ctk.CTk()
     app = CaseSelector(root, debug=True)

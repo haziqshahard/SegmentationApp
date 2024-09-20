@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Segmentor import *
 from ViewHelper import *
 from CaseSelector import *
+from MaskViewer import *
 
 #When the app launches
 #Pull from the case viewer
@@ -26,8 +27,10 @@ ViewHelper:
 Now needs to be able to display both the cavity and the myocardium
 Have to be able to toggle either one individually
 Add line width, color and polygon color settings for this too
-"""
 
+#Features to add:
+Colors need to be set within the app itself
+"""
 
 class App(ctk.CTk):
     def __init__(self):
@@ -48,27 +51,34 @@ class App(ctk.CTk):
 
         self.load_images()
 
-        self.grid_rowconfigure(0, weight=2)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=4)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
         self.segmentor = PolygonDrawer(self, row=0, column=0)
-        # segmentor.grid(row=0, column=0, sticky="ns")
         self.viewhelper = ViewHelper(self, row=0, column=1)
-        # viewhelper.grid(row=0, column=1, sticky="ns")
-        self.caseselector = CaseSelector(self, row=1, column=0)
-
+        self.caseselector = CaseSelector(self, row=1, column=0,theme=self.theme)
+        self.maskviewer = MaskViewer(self, row=1,column=1,theme=self.theme)
+        
         self.title("Segmentor App")
         self.protocol("WM_DELETE_WINDOW", lambda d="delete": saveeverything(d))
+
+        self.bind("<Right>", self.on_key_press)
+        self.bind("<Left>", self.on_key_press)
+        self.bind("<Up>", self.on_key_press)
+        self.bind("<Down>", self.on_key_press)
 
         def saveeverything(d):
             self.segmentor.save_settings(d)
             self.caseselector.savecases()
-
         #Run app 
         self.mainloop()
 
+    def on_key_press(self, event):
+        self.maskviewer.on_key_press(event)
+        self.viewhelper.on_key_press(event)
+        
     def preloadcases(self):
         if os.path.exists('save.txt'):
             with open("save.txt", 'r') as file:

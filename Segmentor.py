@@ -291,7 +291,7 @@ class PolygonDrawer(ctk.CTkFrame):
         # print(f"Slice folders found: {len(self.slice_files[0])}") 
 
     def hextocomp(self,hex):
-        factor = 0.3
+        factor = 0.6
         factor = max(0, min(factor, 1))
         if isinstance(hex, tuple):
             r,g,b,a = hex
@@ -754,7 +754,7 @@ class PolygonDrawer(ctk.CTkFrame):
         
         redrawWindow.grab_set()
 
-        self.sliders(self,redrawWindow, "numpoints", "Number of Redraw Points: ", (50,100), 0)
+        self.sliders(self,redrawWindow, "numpoints", "Number of Redraw Points: ", (30,100), 0)
         self.sliders(self,redrawWindow, "smoothing", "Smoothing Value: ", (20,200),1)
     
     def line_settings(self):
@@ -1162,7 +1162,7 @@ class PolygonDrawer(ctk.CTkFrame):
         # Get the first contour (assuming you only have one object)
         boundary_points = contours[0]  # (N, 1, 2) array representing x, y coordinates
 
-        numpoints = 30
+        numpoints = self.numpoints
         step = len(boundary_points)//numpoints
         boundary_points = boundary_points[::step]
         self.points = [tuple(arr.flatten()) for arr, in boundary_points]
