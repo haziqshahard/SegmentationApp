@@ -45,7 +45,9 @@ class ViewHelper(ctk.CTkFrame):
         else:
             self.root.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
-        self.root.grid_rowconfigure(1, minsize=65)
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
         # Initialize variables
         self.time_index = 0
@@ -92,7 +94,7 @@ class ViewHelper(ctk.CTkFrame):
         self.window.focus_set()
 
     def hextocomp(self,hex):
-            factor = 0.6
+            factor = 0.5
             factor = max(0, min(factor, 1))
             if isinstance(hex, tuple):
                 r,g,b,a = hex
@@ -187,8 +189,6 @@ class ViewHelper(ctk.CTkFrame):
 
                         pad_frame.bind("<Configure>", enforce_aspect_ratio)
             set_aspect(self.canvas,pad_frame, aspect_ratio=self.aspect_ratio)
-            self.root.rowconfigure(0, weight=1)
-            self.root.columnconfigure(0,weight=1)
             pad_frame.configure(width=self.original_width, height=self.original_height)    
 
             #Time/Slice info
@@ -243,7 +243,7 @@ class ViewHelper(ctk.CTkFrame):
             CTkMessagebox(master=self.window, message=f"Error loading image: {e}", icon="cancel")
             
     def bind_keys(self):
-        self.window.bind("<Configure>", self.on_resize)
+        self.canvas.bind("<Configure>", self.on_resize)
 
         if self.debug == True:
             """Bind arrow keys to the widget."""
@@ -255,6 +255,7 @@ class ViewHelper(ctk.CTkFrame):
         self.canvas.bind("<Button-3>", self.handle_right_click)
 
     def on_resize(self,event):
+        self.root.grid_rowconfigure(0,minsize=self.root.winfo_height()*(9/10))
         scale_x = self.canvas.winfo_width() / self.original_width
         scale_y = self.canvas.winfo_height() / self.original_height
 
@@ -350,10 +351,19 @@ class ViewHelper(ctk.CTkFrame):
                         # print(f"Inverted and saved: {filename}")
                     except Exception as e:
                         print(f"Could not process {filename}: {e}")
+
+        msg = CTkMessagebox(master=self.window, title="Invert Masks?", message=f"Do you want to invert all the masks in {os.path.dirname(self.mask_path)}?",
+                        icon="question", option_1="Cancel", option_3="Yes")
+        response = msg.get()
         
-        invert_images_in_folder(os.path.dirname(self.mask_path))
-        CTkMessagebox(master=self.window, message=f"Successfully inverted all images in {os.path.dirname(self.mask_path)}")
+        if response == "Yes":
+            invert_images_in_folder(os.path.dirname(self.mask_path))
+            CTkMessagebox(master=self.window, message=f"Successfully inverted all images in {os.path.dirname(self.mask_path)}")
+        else:
+            return
     
+
+
     def load_settings(self):
         if os.path.exists('save.txt'):
             with open("save.txt", 'r') as file:

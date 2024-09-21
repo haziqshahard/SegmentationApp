@@ -56,8 +56,6 @@ class PolygonDrawer(ctk.CTkFrame):
             self.root.grid(row=row, column=column, padx=5, pady=5,  sticky="nsew")
         else:
             self.root.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        
-        self.root.grid_rowconfigure(1, minsize=65)
 
         pad_frame = ctk.CTkFrame(master=self.root)
         # pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
@@ -121,11 +119,11 @@ class PolygonDrawer(ctk.CTkFrame):
 
             pad_frame.bind("<Configure>", enforce_aspect_ratio)
         set_aspect(self.canvas,pad_frame, aspect_ratio=self.aspect_ratio)
-        self.root.rowconfigure(0, weight=1)
-        self.root.rowconfigure(1, weight=0)
-        self.root.columnconfigure(0,weight=1)
-        self.root.columnconfigure(1,weight=1)
-        self.root.columnconfigure(2,weight=1)
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_columnconfigure(0,weight=1)
+        self.root.grid_columnconfigure(1,weight=1)
+        self.root.grid_columnconfigure(2,weight=1)
         pad_frame.configure(width=self.original_width, height=self.original_height)
 
         #Mode Info
@@ -293,7 +291,7 @@ class PolygonDrawer(ctk.CTkFrame):
         # print(f"Slice folders found: {len(self.slice_files[0])}") 
 
     def hextocomp(self,hex):
-        factor = 0.6
+        factor = 0.5
         factor = max(0, min(factor, 1))
         if isinstance(hex, tuple):
             r,g,b,a = hex
@@ -319,7 +317,7 @@ class PolygonDrawer(ctk.CTkFrame):
     def on_resize(self,event):
          #Implemented from https://www.tutorialspoint.com/how-to-set-the-canvas-size-properly-in-tkinter
         #Initializing new width and height        
-        # print("resizing")
+
         scale_x = self.canvas.winfo_width() / self.original_width
         scale_y = self.canvas.winfo_height() / self.original_height
 
@@ -363,6 +361,8 @@ class PolygonDrawer(ctk.CTkFrame):
         
         self.scalepoints()
         self.redraw_polygon()
+
+        self.root.grid_rowconfigure(0,minsize=self.root.winfo_height()*(9/10))
 
     def on_mouse_down(self,event):
         self.event_data["x"]=event.x
@@ -752,7 +752,7 @@ class PolygonDrawer(ctk.CTkFrame):
         
         redrawWindow.grab_set()
 
-        self.sliders(self,redrawWindow, "numpoints", "Number of Redraw Points: ", (30,100), 0)
+        self.sliders(self,redrawWindow, "numpoints", "Number of Redraw Points: ", (40,100), 0)
         self.sliders(self,redrawWindow, "smoothing", "Smoothing Value: ", (20,200),1)
     
     def line_settings(self):
@@ -818,16 +818,16 @@ class PolygonDrawer(ctk.CTkFrame):
                     print(f"{self.currentdottags[i+1]}")
                 self.lines.append(line)
                 # Bind hover events to the line
-                self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
-                self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))   
+                self.canvas.tag_bind(line, "<Enter>", lambda e,l=line: self.on_line_hover_enter(e,l))
+                self.canvas.tag_bind(line, "<Leave>", lambda e,l=line: self.on_line_hover_leave(e,l))   
         if len(self.points) > 2 and self.points[0] != self.points[-1]:
             if "cavity" in self.currentdottags[-1] and "cavity" in self.currentdottags[0]:
                 line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
             else:
                 line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
             self.lines.append(line)
-            self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
-            self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))
+            self.canvas.tag_bind(line, "<Enter>", lambda e,l=line: self.on_line_hover_enter(e,l))
+            self.canvas.tag_bind(line, "<Leave>", lambda e,l=line: self.on_line_hover_leave(e,l))
         for dot in self.dots:
             self.canvas.tag_raise(dot)
 

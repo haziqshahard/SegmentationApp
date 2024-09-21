@@ -12,40 +12,38 @@ class MaskViewer(ctk.CTkFrame):
     def __init__(self, window, debug=False, row=1, column=1, theme="blue"):
         super().__init__(window)
         self.debug = debug
-        if self.debug == True:
-            self.configure(fg_color="transparent")
         self.window = window
         # self.grid(sticky="nsew")
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme(theme)
         self.font = "Helvetica"
-
+        
+        self.root = ctk.CTkFrame(master=self.window)
         if debug==True:
             self.window.columnconfigure(0, weight=1)
             self.window.rowconfigure(0, weight=1)
-
-        self.root = ctk.CTkFrame(master=self.window)
-        if debug==False:
-            self.root.grid(row=row, column=column,columnspan=1,padx=5, pady=5, sticky="nsew")
-        else:
+            self.configure(fg_color="transparent")
             self.root.grid(row=0, column=0, padx=5, pady=5)
+        else:
+            self.root.grid(row=row, column=column,columnspan=1,padx=5, pady=5, sticky="nsew")
+            # self.configure(fg_color="transparent")
 
-        self.root.grid_rowconfigure(0, weight=0)
-        self.root.grid_columnconfigure(0, weight=0)
-
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
+        # self.configure(fg_color="blue",corner_radius=0)
         # Initialize variables
         self.time_index = 0
         self.slice_index = 0
-        self.original_width = 100
-        self.original_height = 100
+        self.original_width = 10
+        self.original_height = 50
         self.aspect_ratio = 1
-        self.last_width = 100
+        self.last_width = self.original_width
         self.scale_factor = 1
 
         # Load base path and images
 
         if debug==False:
-            self.base_path = self.window.base_path
+            self.base_path = self.window.master.base_path
         elif debug ==True:
             self.base_path = filedialog.askdirectory(title="Select the base folder")
             """Bind arrow keys to the widget."""
@@ -62,7 +60,7 @@ class MaskViewer(ctk.CTkFrame):
 
     def update(self):
         self.destroy()
-        self.window.maskviewer = MaskViewer(self.window, row=1, column=1)
+        self.window.master.maskviewer = MaskViewer(self.window, row=0, column=1)
 
     def loadmask(self):
         if os.path.isfile(self.mask_path):
@@ -192,9 +190,9 @@ class MaskViewer(ctk.CTkFrame):
             self.last_width = self.original_width
             self.aspect_ratio = self.original_width/self.original_height
 
-            pad_frame = ctk.CTkFrame(master=self.root, width = 20,height=20,border_width = 0, border_color="blue")
+            pad_frame = ctk.CTkFrame(master=self.root, width = 20,height=20,border_width = 0, border_color="blue", fg_color="transparent")
             # pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
-            pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=(10,0))
+            pad_frame.grid(row=0, column=0, padx=10, pady=10)
             self.canvas = tk.Canvas(self.root, width=self.original_width, height=self.original_height, scrollregion=(0, 0, 0, 0), borderwidth=0, highlightbackground="#000000" )
 
             def set_aspect(content_frame, pad_frame, aspect_ratio):
@@ -228,7 +226,6 @@ class MaskViewer(ctk.CTkFrame):
             self.root.rowconfigure(0, weight=1)
             self.root.columnconfigure(0,weight=1)
             pad_frame.configure(width=self.original_width, height=self.original_height)    
-
             #Display image
             self.canvimg = self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items
             

@@ -29,7 +29,6 @@ Have to be able to toggle either one individually
 Add line width, color and polygon color settings for this too
 
 #Features to add:
-Colors need to be set within the app itself
 """
 
 class App(ctk.CTk):
@@ -44,6 +43,9 @@ class App(ctk.CTk):
         self.base_path = None
         self.preloadcases()
         
+        self.original_width = self.winfo_width()
+        self.original_height = self.winfo_height()
+
         self.current_slice = 1
         self.slice_index = 0
         self.current_time = 1
@@ -52,18 +54,28 @@ class App(ctk.CTk):
         self.load_images()
 
         self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=4)
+        self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
         self.segmentor = PolygonDrawer(self, row=0, column=0)
         self.viewhelper = ViewHelper(self, row=0, column=1)
-        self.caseselector = CaseSelector(self, row=1, column=0,theme=self.theme)
-        self.maskviewer = MaskViewer(self, row=1,column=1,theme=self.theme)
+
+        self.bottomrow = ctk.CTkFrame(self, fg_color=self.cget("fg_color"))
+        self.bottomrow.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        self.bottomrow.grid_rowconfigure(0, weight=1)
+        self.bottomrow.grid_columnconfigure(1, weight=1)
+        self.bottomrow.grid_columnconfigure(0, weight=1)
+
+        self.caseselector = CaseSelector(self.bottomrow, row=0, column=0,theme=self.theme)
+        self.maskviewer = MaskViewer(self.bottomrow, row=0,column=1,theme=self.theme)
+        # self.maskviewer.configure(fg_color="white",corner_radius=0)
+        # self.caseselector.configure(height=5)
         
         self.title("Segmentor App")
         self.protocol("WM_DELETE_WINDOW", lambda d="delete": saveeverything(d))
 
+        self.bind("<Configure>", self.on_resize)
         self.bind("<Right>", self.on_key_press)
         self.bind("<Left>", self.on_key_press)
         self.bind("<Up>", self.on_key_press)
@@ -74,6 +86,16 @@ class App(ctk.CTk):
             self.caseselector.savecases()
         #Run app 
         self.mainloop()
+
+    def on_resize(self,event):
+        self.current_width = self.winfo_width()
+        self.current_height = self.winfo_height()
+
+        toprowminsize = self.current_height * (3/4)
+        caseselectorminsize = self.current_width *(6/7)
+
+        self.grid_rowconfigure(0,minsize=toprowminsize)
+        self.bottomrow.grid_columnconfigure(0, minsize=caseselectorminsize)
 
     def on_key_press(self, event):
         self.maskviewer.on_key_press(event)
