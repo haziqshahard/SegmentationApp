@@ -29,6 +29,8 @@ class PolygonDrawer(ctk.CTkFrame):
     different polygon fill and different colored dots
     Should be able to select or deselect already existing points to make them cavity points
     Needs to have error checks if points don't exist for this   
+
+    #ERROR : Problem with the dottags
     """
     def __init__(self,window, image_path="", debug=False, row=1, column=0):
         #Defining windows
@@ -583,6 +585,7 @@ class PolygonDrawer(ctk.CTkFrame):
 
         dot=self.draw_point(x,y,type=type)
         self.dots.append(dot) #Collecting the dot tags
+        self.currentdottags.append(("dot","myocardium") if type=="myocardium" else ("dot",))
         self.redraw_points()#Elevate all the points to the top
         self.redraw_polygon()
 
@@ -596,10 +599,11 @@ class PolygonDrawer(ctk.CTkFrame):
         # Find the index of the line in the list of lines
         line_index = self.lines.index(line)
         
-        # Insert the new point into the points list at the correct position
-        # The new point should be inserted right after the starting point of the line
+        print(f"{line_index}/{len(self.lines)}")
         start_point_index = line_index
         end_point_index = (line_index + 1) % len(self.points)
+        if end_point_index == 0:
+            end_point_index = len(self.points)
         
         self.scaledpoints.insert(end_point_index, (new_x, new_y))
         self.points.insert(end_point_index, (new_x/self.scale_factor,new_y/self.scale_factor))
@@ -632,34 +636,27 @@ class PolygonDrawer(ctk.CTkFrame):
         # Draw the new dot at the clicked position
         dot = self.draw_point(new_x, new_y,type=type)
         self.dots.insert(end_point_index, dot)
+        self.currentdottags.insert(end_point_index, self.canvas.gettags(dot))
         # Ensure that dots are always on top
         for dot in self.dots:
             self.canvas.tag_raise(dot)
 
     def redraw_points(self,mode=""):
-        if mode == "switched":
-            dottags = self.currentdottags
-            # print(f"Switched tags:{dottags}")
-        else:
-            dottags = []
-            for dot in self.dots:
-                dottags.append(self.canvas.gettags(dot))
-
         # Clear existing dots
         for dot in self.dots:
             self.canvas.delete(dot)
         self.dots.clear()
+        # self.currentdottags.clear()
 
         # Draw the dots based on the scaled points list
         for i in range(len(self.scaledpoints)):
-            tags = dottags[i]
+            tags = self.currentdottags[i]
             x,y = self.scaledpoints[i]
             if "cavity" in tags:
                 dot=self.draw_point(x,y,"cavity")
             else:
                 dot=self.draw_point(x,y)
             self.dots.append(dot)
-
         # Ensure that dots are always on top
         for dot in self.dots:
             self.canvas.tag_raise(dot)
@@ -671,6 +668,7 @@ class PolygonDrawer(ctk.CTkFrame):
 
             self.canvas.delete(dot)
             self.dots.pop(index)
+            self.currentdottags.pop(index)
             self.points.pop(index)
             self.scaledpoints.pop(index)
 
@@ -798,15 +796,6 @@ class PolygonDrawer(ctk.CTkFrame):
             self.canvas.delete(self.polygon)
         self.polygon = None
 
-        if mode == "switched":
-            dottags = self.currentdottags
-            # print(f"Switched tags:{dottags}")
-        else:
-            dottags = []
-            for dot in self.dots:
-                dottags.append(self.canvas.gettags(dot))
-            # print(f"Unswitched tags:{dottags}")
-
         # Draw lines between points
         if len(self.scaledpoints) > 1:
             #Drawing the polygon
@@ -819,43 +808,31 @@ class PolygonDrawer(ctk.CTkFrame):
             #Draw the lines
             for i in range(len(self.scaledpoints) - 1):
                 try:
-                    if "cavity" in dottags[i] and "cavity" in dottags[i+1]:
+                    if "cavity" in self.currentdottags[i] and "cavity" in self.currentdottags[i+1]:
                         line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
                     else:
                         line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
                 except IndexError:
-                    print(f"Dottags Length:{len(dottags)}")
+                    print(f"Dottags Length:{len(self.currentdottags)}")
                     print(f"Index attempted:{[i,i+1]}")
-                    print(f"{dottags[i+1]}")
-
+                    print(f"{self.currentdottags[i+1]}")
                 self.lines.append(line)
                 # Bind hover events to the line
                 self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
                 self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))   
-            if len(self.points) > 2 and self.points[0] != self.points[-1]:
-                if "cavity" in dottags[-1] and "cavity" in dottags[0]:
-                    line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
-                else:
-                    line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
-                self.lines.append(line)
-                self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
-                self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))
+        if len(self.points) > 2 and self.points[0] != self.points[-1]:
+            if "cavity" in self.currentdottags[-1] and "cavity" in self.currentdottags[0]:
+                line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
+            else:
+                line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
+            self.lines.append(line)
+            self.canvas.tag_bind(line, "<Enter>", lambda e, l=line: self.on_line_hover_enter(e, l))
+            self.canvas.tag_bind(line, "<Leave>", lambda e, l=line: self.on_line_hover_leave(e, l))
         for dot in self.dots:
             self.canvas.tag_raise(dot)
 
     def PILdrawpoly(self):
-        if len(self.currentdottags) >2:
-            dottags = self.currentdottags
-            # print(f"Switched tags:{dottags}")
-        else:
-            dottags = []
-            for dot in self.dots:
-                dottags.append(self.canvas.gettags(dot))
-            # print(f"Unswitched tags:{dottags}")
-        
-        #If cavity is present in the tag, get the index and then take it from self.scaledpoints
-
-        cavidx = [index for index, tup in enumerate(dottags) if "cavity" in tup]
+        cavidx = [index for index, tup in enumerate(self.currentdottags) if "cavity" in tup]
         cavitypoints = [self.scaledpoints[i] for i in cavidx]
 
         overlay = Image.new('RGBA', (self.current_width, self.current_height), (255,255,255,0))
@@ -877,6 +854,7 @@ class PolygonDrawer(ctk.CTkFrame):
             self.canvas.delete(dot)
        
         self.points.clear()
+        self.currentdottags.clear()
         self.dots.clear()
         self.lines.clear()
         self.polygon = None
@@ -889,15 +867,11 @@ class PolygonDrawer(ctk.CTkFrame):
             draw = ImageDraw.Draw(mask)
             # print(self.points)
             cavity = False
-
-            dottags = []
-            for dot in self.dots:
-                dottags.append(self.canvas.gettags(dot))
             
             # Generate smooth points along the curve
             u_new = np.linspace(0, 1, self.smoothing)
             #If cavity is present in the tag, get the index and then take it from self.scaledpoints
-            cavidx = [index for index, tup in enumerate(dottags) if "cavity" in tup]
+            cavidx = [index for index, tup in enumerate(self.currentdottags) if "cavity" in tup]
             if len(cavidx) >2:
                 cavitypoints = [self.points[i] for i in cavidx]
                 cavitypointsnp = np.array(cavitypoints)
