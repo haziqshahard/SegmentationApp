@@ -76,7 +76,7 @@ class MaskViewer(ctk.CTkFrame):
             # Create a Draw object
             draw = ImageDraw.Draw(img)
             # Optionally, load a font (default font is used if not specified)
-            font = ImageFont.truetype("arial.ttf", 30)  # Use default font
+            font = ImageFont.truetype("arial.ttf", 40)  # Use default font
             # Alternatively, you can specify a font: font = ImageFont.truetype("arial.ttf", font_size)
 
             # Get the bounding box for the text

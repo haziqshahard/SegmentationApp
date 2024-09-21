@@ -7,5 +7,5 @@ polygoncolor=(70, 182, 255, 42)
 dotsize=5
 linewidth=2
 smoothing=100
-numpoints=30
+numpoints=50
 paths=[['C:/Users/Haziq/OneDrive - Imperial College London/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Images/TOF 05 AUG 2016 P1A (one week after followup)[Part of MYO missing]', 'completed'], ['C:/Users/Haziq/OneDrive - Imperial College London/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Images/TOF 24JUN2016 P1', 'completed'], ['C:/Users/Haziq/OneDrive - Imperial College London/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Images/21092021P2_3(DONE)', 'notcompleted'], ['C:/Users/Haziq/OneDrive - Imperial College London/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Images/07SEP2021P2_1(SECOND TRY)', 'notcompleted'], ['C:/Users/Haziq/OneDrive - Imperial College London/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Images/skipped_missingmyo/07SEP2021P1_3(SKIPPED)', 'notcompleted']]

@@ -1,8 +1,6 @@
-import tkinter as tk
-from tkinter import filedialog, Text
+from tkinter import filedialog
 import os
 import sys
-from customtkinter import *
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from Segmentor import *
@@ -27,8 +25,6 @@ ViewHelper:
 Now needs to be able to display both the cavity and the myocardium
 Have to be able to toggle either one individually
 Add line width, color and polygon color settings for this too
-
-#Features to add:
 """
 
 class App(ctk.CTk):
