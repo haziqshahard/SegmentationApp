@@ -13,22 +13,15 @@ class CaseSelector(ctk.CTkFrame):
         super().__init__(window)
         self.debug = debug
         self.window = window
-        self.window.title("Case Selector")
-        self.window.protocol("WM_DELETE_WINDOW", self.savecases)
-
-        ctk.set_appearance_mode("dark")
-        # if self.debug == False:
-        #     ctk.set_default_color_theme(self.window.theme)  # Other themes: "blue", "green"
-        # else:
-        ctk.set_default_color_theme(theme)
-        self.fontsize = 15
-        self.font = 'Helvetica'
-        self.settings = {}
-        self.paths = []
 
         if debug==True:
+            self.window.title("Case Selector")
+            self.window.protocol("WM_DELETE_WINDOW", self.savecases)
             self.window.columnconfigure(0, weight=1)
             self.window.rowconfigure(0, weight=1)
+        
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme(theme)
 
         self.root = ctk.CTkFrame(master=self.window)
         self.root.rowconfigure(0, weight=1)
@@ -41,13 +34,14 @@ class CaseSelector(ctk.CTkFrame):
         else:
             self.root.grid(row=0, column=0, sticky="nsew")
 
-        # self.root.grid(row=row, column=column, columnspan=2, sticky="nsew")
-        # self.root.rowconfigure(0,weight = 1)
-        # self.root.columnconfigure(0, weight=1)
-
-        self.original_width = self.root.winfo_width()
-        self.original_height = 200
+        self.original_width = 50
+        self.original_height = 50
         self.scale_factor = 1
+        
+        self.fontsize = 15
+        self.font = 'Helvetica'
+        self.settings = {}
+        self.paths = []
 
         self.scrollframe = ctk.CTkScrollableFrame(master=self.root, label_text="Case Selector", label_anchor="w"
                                                   ,label_font=(self.font,self.fontsize*self.scale_factor))
@@ -83,14 +77,14 @@ class CaseSelector(ctk.CTkFrame):
         self.selectedbutton = None
 
         if self.paths == [] and self.debug == False:
-            self.paths = [self.window.base_path]
+            self.paths = [self.window.master.base_path]
         elif self.paths == [] and self.debug == True:
             pass
 
         self.preloadcases()
 
         if debug == False:
-            idx = self.find_index(self.paths,self.window.base_path)
+            idx = self.find_index(self.paths,self.window.master.base_path)
             self.selectedbutton = self.buttons[idx]
             self.selectedbutton.configure(border_color = "white", border_width=2)
             #Whatever the app's base path is, check the 
@@ -150,8 +144,8 @@ class CaseSelector(ctk.CTkFrame):
                 self.renderbuttons()
             else:
                 if self.debug == False:
-                    self.paths = [[self.window.base_path,"notcompleted"]]
-                    self.createbutton(self.window.base_path)
+                    self.paths = [[self.window.master.base_path,"notcompleted"]]
+                    self.createbutton(self.window.master.base_path)
                     self.renderbuttons()
                 else:
                     path = tk.filedialog.askdirectory(title="Please select an initial case")
@@ -249,13 +243,13 @@ class CaseSelector(ctk.CTkFrame):
         else:
             button.configure(border_color = "white", border_width=2)
         if self.debug == False: 
-            self.window.base_path = self.paths[pathidx][0]
-            image_path = os.path.join(self.window.base_path, "time001", 'slice001time001.png')
-            self.window.image_path = image_path.replace('\\', '/')
+            self.window.master.base_path = self.paths[pathidx][0]
+            image_path = os.path.join(self.window.master.base_path, "time001", 'slice001time001.png')
+            self.window.master.image_path = image_path.replace('\\', '/')
             
-            self.window.segmentor.update()
-            self.window.viewhelper.update()
-            self.window.maskviewer.update()
+            self.window.master.segmentor.update()
+            self.window.master.viewhelper.update()
+            self.window.master.maskviewer.update()
         elif self.debug == True:
             print(self.paths[pathidx][0])
         self.selectedbutton = button
