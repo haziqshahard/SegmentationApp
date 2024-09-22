@@ -1,40 +1,20 @@
 from tkinter import filedialog
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from utils import *
 
 from Segmentor import *
 from ViewHelper import *
 from CaseSelector import *
 from MaskViewer import *
 
-#When the app launches
-#Pull from the case viewer
-#If there is nothing in the case viewer
-#Display in the polygon viewer and the view helper (please select a case)
-#Whatever button is clicked in the case viewer, update the base path for both the segmentor and the view helper
-
-"""Have to implement cavity fill
-Segmentor:
-Have to have a new set of points, selectable with middle mouse button
-different polygon fill and different colored dots
-Should be able to select or deselect already existing points to make them cavity points
-Needs to have error checks if points don't exist for this
-
-ViewHelper:
-Now needs to be able to display both the cavity and the myocardium
-Have to be able to toggle either one individually
-Add line width, color and polygon color settings for this too
-"""
-
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        # self.grid(sticky="nsew")
-        self.theme = "dark-blue"
-        ctk.set_appearance_mode("dark")
+        self.theme = "themes/Harlequin.json"
+        darklight = "dark"
+        ctk.set_appearance_mode(darklight)
         ctk.set_default_color_theme(self.theme)
-        # self.after(0, lambda:self.state('zoomed'))
         self.settings = {}
         self.base_path = None
         self.preloadcases()
@@ -47,24 +27,24 @@ class App(ctk.CTk):
         self.current_time = 1
         self.time_index = 0
 
-        self.load_images()
+        self.slice_files, self.time_folders = utils.load_images(self.base_path)
+        self.load_image()
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        self.segmentor = PolygonDrawer(self, row=0, column=0)
-        self.viewhelper = ViewHelper(self, row=0, column=1)
-
-        self.bottomrow = ctk.CTkFrame(self, fg_color=self.cget("fg_color"))
+        self.bottomrow = ctk.CTkFrame(self, fg_color=self.cget("fg_color"),border_width=0)
         self.bottomrow.grid(row=1, column=0, columnspan=2, sticky="nsew")
         self.bottomrow.grid_rowconfigure(0, weight=1)
         self.bottomrow.grid_columnconfigure(1, weight=1)
         self.bottomrow.grid_columnconfigure(0, weight=1)
 
-        self.caseselector = CaseSelector(self.bottomrow, row=0, column=0,theme=self.theme)
-        self.maskviewer = MaskViewer(self.bottomrow, row=0,column=1,theme=self.theme)
+        self.segmentor = PolygonDrawer(self, row=0, column=0,darklight=darklight)
+        self.viewhelper = ViewHelper(self, row=0, column=1,darklight=darklight)
+        self.caseselector = CaseSelector(self.bottomrow, row=0, column=0,theme=self.theme,darklight=darklight)
+        self.maskviewer = MaskViewer(self.bottomrow, row=0,column=1,theme=self.theme,darklight=darklight)
         # self.maskviewer.configure(fg_color="white",corner_radius=0)
         # self.caseselector.configure(height=5)
         
@@ -125,21 +105,6 @@ class App(ctk.CTk):
             while self.base_path == '':
                 self.base_path= filedialog.askdirectory(title="Please select an initial case")
 
-    def load_images(self):
-        """Load time folders and slice files."""
-        # Regular expression to match time folders in the format time001, time002, etc.
-        time_pattern = re.compile(r'^time\d{3}$')
-
-        # Get all time folders matching the format
-        self.time_folders = sorted([d for d in os.listdir(self.base_path) 
-                                    if os.path.isdir(os.path.join(self.base_path, d)) and time_pattern.match(d)])
-        # print(f"Time folders found: {len(self.time_folders)}")  # Debugging line
-
-        # Get all slice files for each time folder
-        self.slice_files = [sorted([f for f in os.listdir(os.path.join(self.base_path, t)) if os.path.isfile(os.path.join(self.base_path, t, f))]) for t in self.time_folders]
-        # print(f"Slice files found: {len(self.slice_files[0])}")  # Debugging line
-        self.load_image()
-
     def load_image(self, slice_index = 0, time_index=0):
         """Load and display the image based on current slice and time index."""
         time_folder = self.time_folders[time_index]
@@ -148,8 +113,7 @@ class App(ctk.CTk):
 
         # Convert to the correct format for the operating system
         self.image_path = self.image_path.replace('\\', '/')
-        # print(f"Loading image: {image_path}")  # Debugging line
-
+        # print(f"Loading image: {image_path}")  # Debugging 
 
 if __name__ == "__main__":
     app = App()

@@ -2,19 +2,20 @@
 
 import customtkinter as ctk
 import tkinter as tk
-from tkinter import filedialog, Text
+from tkinter import filedialog
 import re
 import os
 from CTkMessagebox import CTkMessagebox
 from PIL import Image, ImageTk, ImageDraw, ImageFont
+import utils
 
 class MaskViewer(ctk.CTkFrame):
-    def __init__(self, window, debug=False, row=1, column=1, theme="blue"):
+    def __init__(self, window, debug=False, row=1, column=1, theme="blue",darklight="dark"):
         super().__init__(window)
         self.debug = debug
         self.window = window
         # self.grid(sticky="nsew")
-        ctk.set_appearance_mode("dark")
+        ctk.set_appearance_mode(darklight)
         ctk.set_default_color_theme(theme)
         self.font = "Helvetica"
         
@@ -53,7 +54,7 @@ class MaskViewer(ctk.CTkFrame):
             self.window.bind("<Down>", self.on_key_press)
 
         # Load the initial image
-        self.load_images()
+        self.slice_files, self.time_folders = utils.load_images(self.base_path)
         self.load_image(self.slice_index, self.time_index)
         self.canvas.bind("<Configure>", self.on_resize)
 
@@ -124,22 +125,6 @@ class MaskViewer(ctk.CTkFrame):
         self.updateimage(self.slice_index, self.time_index)
         self.mask_path = self.base_path + "/time{time:03}/segmented/Segmented Slice{slice:03}.png".format(time=self.time_index+1, slice=self.slice_index+1)
         # print(self.time_index, self.slice_index)
-
-    def load_images(self):
-        """Load time folders and slice files."""
-        # Regular expression to match time folders in the format time001, time002, etc.
-        #The base path will be the cases path
-        time_pattern = re.compile(r'^time\d{3}$')
-
-        # Get all time folders matching the format
-        self.time_folders = sorted([d for d in os.listdir(self.base_path) 
-                                    if os.path.isdir(os.path.join(self.base_path, d)) and time_pattern.match(d)])
-        # print(f"Time folders found: {len(self.time_folders)}")  # Debugging line
-
-        # Get all slice files for each time folder
-        self.slice_files = [sorted([f for f in os.listdir(os.path.join(self.base_path, t)) if os.path.isfile(os.path.join(self.base_path, t, f))]) for t in self.time_folders]
-        # print(f"Slice files found: {len(self.slice_files[0])}")  # Debugging line
-
     
     def on_resize(self,event):
         scale_x = self.canvas.winfo_width() / self.original_width

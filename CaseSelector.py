@@ -9,7 +9,7 @@ class CaseSelector(ctk.CTkFrame):
     Window then saves the file path and displays it.
     Goes into save.txt with all the case files so that when it is next opened, can just be clicked and it will appear
     """
-    def __init__(self, window, debug=False, row=1, column=0, theme="blue"):
+    def __init__(self, window, debug=False, row=1, column=0, theme="blue",darklight="dark"):
         super().__init__(window)
         self.debug = debug
         self.window = window
@@ -20,10 +20,10 @@ class CaseSelector(ctk.CTkFrame):
             self.window.columnconfigure(0, weight=1)
             self.window.rowconfigure(0, weight=1)
         
-        ctk.set_appearance_mode("dark")
+        ctk.set_appearance_mode(darklight)
         ctk.set_default_color_theme(theme)
 
-        self.root = ctk.CTkFrame(master=self.window)
+        self.root = ctk.CTkFrame(master=self.window,fg_color="transparent")
         self.root.rowconfigure(0, weight=1)
         self.root.columnconfigure(0, weight=1)
         self.root.grid(row=0, column=0, padx=5, pady=5)
@@ -44,8 +44,8 @@ class CaseSelector(ctk.CTkFrame):
         self.paths = []
 
         self.scrollframe = ctk.CTkScrollableFrame(master=self.root, label_text="Case Selector", label_anchor="w"
-                                                  ,label_font=(self.font,self.fontsize*self.scale_factor))
-        self.scrollframe.grid(row=0, column=0,sticky="nsew")
+                                                  ,label_font=(self.font,self.fontsize*self.scale_factor),corner_radius=7)
+        self.scrollframe.grid(row=0, column=0,padx=5,pady=5,sticky="nsew")
 
         self.buttons = []
 
@@ -96,7 +96,6 @@ class CaseSelector(ctk.CTkFrame):
         else:
             if os.path.exists(self.base_path):
                 self.paths += [[str(self.base_path),"notcompleted"]]
-                # print(self.paths)
                 self.createbutton(self.base_path)
                 self.renderbuttons()
             else:
@@ -123,11 +122,9 @@ class CaseSelector(ctk.CTkFrame):
         if self.debug == False:
             return
         else:
-            self.window.destroy()  
-            
+            self.window.destroy()         
     
     def preloadcases(self):
-        #CAN DEPRECATE THIS AS DOING IT IN THE SUPER 
         if os.path.exists("save.txt"):
             with open("save.txt", 'r') as file:
                 for line in file:
@@ -172,11 +169,6 @@ class CaseSelector(ctk.CTkFrame):
 
     def createbutton(self, path):
         case = os.path.basename(os.path.normpath(path))
-
-        # pathidx = self.find_index(self.paths,path)
-        # print(self.paths)
-        # print(pathidx)    
-        # pathidx = self.paths.index(path)
         btn = ctk.CTkButton(master=self.scrollframe, height=30, text=f"{case}", 
                             font=(self.font,self.fontsize),anchor="w")
         btn.bind("<Button-1>", command=lambda event, path=path: self.loadcase(event, path = path))
@@ -188,10 +180,9 @@ class CaseSelector(ctk.CTkFrame):
         pathidx = self.find_index(self.paths,path)
         # Create a context menu
         context_menu = tk.Menu(self.root, tearoff=0)
-        # Add 'Delete Case' option to the context menu
         context_menu.add_command(label="Delete Case", command=lambda: self.delete_button(pathidx))
         context_menu.add_command(label="Mark Completed",command = lambda: self.switchcompleted(pathidx))
-        # Show the menu at the position of the right-click
+
         context_menu.tk_popup(event.x_root, event.y_root)
 
     def delete_button(self,pathidx):

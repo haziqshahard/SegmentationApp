@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from CTkMessagebox import CTkMessagebox
 import ast
+import utils
 
 class ViewHelper(ctk.CTkFrame):
     """
@@ -22,13 +23,13 @@ class ViewHelper(ctk.CTkFrame):
     render_polygon has to show the polygon if it exists, and not show it if it doesnt
     shouldn't need constant toggling in order to show the thing
     """
-    def __init__(self, window, debug=False, row=1, column=0):
+    def __init__(self, window, debug=False, row=1, column=0,darklight="dark"):
         super().__init__(window)
         self.debug = debug
         self.configure(fg_color="transparent")
         self.window = window
         # self.grid(sticky="nsew")
-        ctk.set_appearance_mode("dark")
+        ctk.set_appearance_mode(darklight)
         if self.debug == False:
             ctk.set_default_color_theme(self.window.theme)  # Other themes: "blue", "green"
         else:
@@ -77,63 +78,79 @@ class ViewHelper(ctk.CTkFrame):
             self.base_path = filedialog.askdirectory(title="Select the base folder")
         #If the base_path is empty, needs to just display "Please select case file"
 
-        # print(self.base_path)
-        self.load_images()
+        self.slice_files, self.time_folders = utils.load_images(self.base_path)
         self.settings = {}
         self.load_settings()
 
         # Load the initial image
         self.load_image(self.slice_index, self.time_index)
-       
+        self.img = Image.open(self.image_path)
+        self.photo = ImageTk.PhotoImage(self.img)
+        
+        self.original_width = self.img.width
+        self.original_height = self.img.height
+        self.last_width = self.original_width
+
+        pad_frame = ctk.CTkFrame(master=self.root, width = 200,height=200)
+        pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=(10,0))
+        pad_frame.configure(width=self.original_width, height=self.original_height) 
+        self.canvas = tk.Canvas(self.root, width=self.original_width, height=self.original_height, scrollregion=(0, 0, 0, 0), borderwidth=0, highlightbackground="#000000" )
+        
+        #Setting fixed aspect ratio
+        self.aspect_ratio = self.original_width/self.original_height
+        utils.set_aspect(self.canvas,pad_frame, aspect_ratio=self.aspect_ratio)
+
+         #Display image
+        self.canvimg = self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items  
+
+        #---------Time/Slice info---------
+        self.info = ctk.CTkFrame(master=self.root)
+        self.info.grid(row=1, column=0, padx=5, pady=10, sticky="ns")    
+        self.info.grid_rowconfigure(0, weight=1)
+        self.info.grid_columnconfigure(0, weight=1)
+        self.labelinfo =ctk.CTkLabel(master=self.info, text=f"Time: {self.time_index+1:02d}/{len(self.time_folders)}, Slice: {self.slice_index+1:02d}/{len(self.slice_files[0])}",
+                                        font=('TkDefaultFont',self.font_size+5,'bold'))
+        self.labelinfo.grid(row=0,column=0, padx=10, sticky="")
+
+        #---------MOVEMENT INFO BOX---------
+        self.moveinfo = ctk.CTkFrame(master=self.root)
+        self.moveinfo.grid(row=1, column=0, padx=(10,10), pady=7,sticky="e")
+        self.moveinfo.rowconfigure(0, weight=0)
+        self.moveinfo.rowconfigure(1, weight=0)
+        self.labelfontsize = 15
+
+        padx=4
+        upbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
+        upbox.grid(row=0,column=1, padx=padx, pady=0, sticky="nsew")
+        uplabel = ctk.CTkLabel(master=upbox, text=f"△", font=(self.font, self.labelfontsize,'bold'), anchor='center', justify='center')
+        uplabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+        
+        downbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
+        downbox.grid(row=1,column=1, padx=padx, pady=0, sticky="nsew")
+        downlabel = ctk.CTkLabel(master=downbox, text=f"▽", font=(self.font, self.labelfontsize,'bold'), anchor='center', justify='center')
+        downlabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+        
+        leftbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
+        leftbox.grid(row=1,column=0, padx=(padx,0), pady=0, sticky="nsew")
+        leftlabel = ctk.CTkLabel(master=leftbox, text=f"◁", font=(self.font, self.labelfontsize+10,'bold'), anchor='center', justify='center')
+        leftlabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+
+        rightbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
+        rightbox.grid(row=1,column=2, padx=(0,padx), pady=0, sticky="nsew")
+        rightlabel = ctk.CTkLabel(master=rightbox, text=f"▷", font=(self.font, self.labelfontsize+10,'bold'), anchor='center', justify='center')
+        rightlabel.grid(row=1,column=2, padx=7, pady=(1,1), sticky="nsew")
+
+        #---------Context Menu---------
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
         self.context_menu.add_command(label="Toggle Drawn Polygon", command=self.toggle_polygon)
         self.context_menu.add_command(label="Invert All Folder Masks", command=self.invert_masks)
-        # self.context_menu.add_command(label = "Toggle Current Polygon")
-        # Bind arrow keys
+
         self.bind_keys()
         self.window.focus_set()
-
-    def hextocomp(self,hex):
-            factor = 0.5
-            factor = max(0, min(factor, 1))
-            if isinstance(hex, tuple):
-                r,g,b,a = hex
-                # Calculate the darker color by applying the factor
-                r = int(r * factor)
-                g = int(g * factor)
-                b = int(b * factor)
-
-                return (r,g,b,a)
-            else:
-                # Ensure the factor is between 0 and 1
-                hex = hex.replace(f"#", "")
-                # Convert the hex color to RGB
-                r, g, b = tuple(int(hex[i:i + 2], 16) for i in (0, 2, 4))
-                # Calculate the darker color by applying the factor
-                r = int(r * factor)
-                g = int(g * factor)
-                b = int(b * factor)
-
-                # Convert back to hex
-                return f'#{r:02x}{g:02x}{b:02x}'
 
     def update(self):
         self.destroy()
         self.window.viewhelper = ViewHelper(self.window, row=0, column=1)
-
-    def load_images(self):
-        """Load time folders and slice files."""
-        # Regular expression to match time folders in the format time001, time002, etc.
-        time_pattern = re.compile(r'^time\d{3}$')
-
-        # Get all time folders matching the format
-        self.time_folders = sorted([d for d in os.listdir(self.base_path) 
-                                    if os.path.isdir(os.path.join(self.base_path, d)) and time_pattern.match(d)])
-        # print(f"Time folders found: {len(self.time_folders)}")  # Debugging line
-
-        # Get all slice files for each time folder
-        self.slice_files = [sorted([f for f in os.listdir(os.path.join(self.base_path, t)) if os.path.isfile(os.path.join(self.base_path, t, f))]) for t in self.time_folders]
-        # print(f"Slice files found: {len(self.slice_files[0])}")  # Debugging line
 
     def load_image(self, slice_index, time_index):
         """Load and display the image based on current slice and time index."""
@@ -144,103 +161,9 @@ class ViewHelper(ctk.CTkFrame):
         # Convert to the correct format for the operating system
         self.image_path = self.image_path.replace('\\', '/')
         self.mask_path = self.base_path + "/time{time:03}/segmented/Segmented Slice{slice:03}.png".format(time=self.time_index+1, slice=self.slice_index+1)
-        # print(self.image_path)
-        # print(f"Loading image: {image_path}")  # Debugging line
 
-        try:
-            self.img = Image.open(self.image_path) # Resize the image for display
-            self.photo = ImageTk.PhotoImage(self.img)
-            
-            self.original_width = self.img.width
-            self.original_height = self.img.height
-            self.last_width = self.original_width
-            self.aspect_ratio = self.original_width/self.original_height
-
-            pad_frame = ctk.CTkFrame(master=self.root, width = 200,height=200,border_width = 0, border_color="blue")
-            # pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
-            pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=(10,0))
-            self.canvas = tk.Canvas(self.root, width=self.original_width, height=self.original_height, scrollregion=(0, 0, 0, 0), borderwidth=0, highlightbackground="#000000" )
-
-            def set_aspect(content_frame, pad_frame, aspect_ratio):
-                    # Taken from user Bryan Oakley : https://stackoverflow.com/a/16548607
-                    # a function which places a frame within a containing frame, and
-                    # then forces the inner frame to keep a specific aspect ratio
-                        def enforce_aspect_ratio(event):
-                            # when the pad window resizes, fit the content into it,
-                            # either by fixing the width or the height and then
-                            # adjusting the height or width based on the aspect ratio.
-
-                            # start by using the width as the controlling dimension
-                            desired_width = event.width
-                            desired_height = int(event.width / aspect_ratio)
-
-                            # if the window is too tall to fit, use the height as
-                            # the controlling dimension
-                            if desired_height > event.height:
-                                desired_height = event.height
-                                desired_width = int(event.height * aspect_ratio)
-
-                            x_center = (event.width - desired_width) // 2
-                            y_center = (event.height - desired_height) // 2
-
-                            # place the window, giving it an explicit size
-                            content_frame.place(in_=pad_frame, x=x_center, y=y_center, anchor="nw",
-                                width=desired_width, height=desired_height)
-
-                        pad_frame.bind("<Configure>", enforce_aspect_ratio)
-            set_aspect(self.canvas,pad_frame, aspect_ratio=self.aspect_ratio)
-            pad_frame.configure(width=self.original_width, height=self.original_height)    
-
-            #Time/Slice info
-            self.info = ctk.CTkFrame(master=self.root)
-            self.info.grid(row=1, column=0, padx=5, pady=5, sticky="ns")    
-            self.info.grid_rowconfigure(0, weight=1)
-            self.info.grid_columnconfigure(0, weight=1)
-            self.labelinfo =ctk.CTkLabel(master=self.info, text=f"Time: {self.time_index+1:02d}/{len(self.time_folders)}, Slice: {self.slice_index+1:02d}/{len(self.slice_files[0])}",
-                                         font=('TkDefaultFont',self.font_size+5,'bold'))
-            self.labelinfo.grid(row=0,column=0, padx=10, sticky="")
-
-            #Info box for file movements
-            self.moveinfo = ctk.CTkFrame(master=self.root)
-            self.moveinfo.grid(row=1, column=0, padx=(10,10), pady=5,sticky="e")
-            self.moveinfo.rowconfigure(0, weight=0)
-            self.moveinfo.rowconfigure(1, weight=0)
-            right_arrow = "\u2192"
-            left_arrow = "\u2190"
-            up_arrow = "\u219F"
-            down_arrow = "\u21A1"
-
-            self.labelfontsize = 15
-
-            padx=4
-            upbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-            upbox.grid(row=0,column=1, padx=padx, pady=0, sticky="nsew")
-            uplabel = ctk.CTkLabel(master=upbox, text=f"△", font=(self.font, self.labelfontsize,'bold'), anchor='center', justify='center')
-            uplabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
-            
-            downbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-            downbox.grid(row=1,column=1, padx=padx, pady=0, sticky="nsew")
-            downlabel = ctk.CTkLabel(master=downbox, text=f"▽", font=(self.font, self.labelfontsize,'bold'), anchor='center', justify='center')
-            downlabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
-            
-            leftbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-            leftbox.grid(row=1,column=0, padx=(padx,0), pady=0, sticky="nsew")
-            leftlabel = ctk.CTkLabel(master=leftbox, text=f"◁", font=(self.font, self.labelfontsize+10,'bold'), anchor='center', justify='center')
-            leftlabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
-
-            rightbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-            rightbox.grid(row=1,column=2, padx=(0,padx), pady=0, sticky="nsew")
-            rightlabel = ctk.CTkLabel(master=rightbox, text=f"▷", font=(self.font, self.labelfontsize+10,'bold'), anchor='center', justify='center')
-            rightlabel.grid(row=1,column=2, padx=7, pady=(1,1), sticky="nsew")
-
-            #Display image
-            self.canvimg = self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items
-            
-            # #Display polygon
-            # self.render_polygon()     
-        
-        except Exception as e:
-            CTkMessagebox(master=self.window, message=f"Error loading image: {e}", icon="cancel")
+        if os.path.isfile(self.image_path) != True:
+            CTkMessagebox(master=self.window, message=f"Error loading image {self.image_path}", icon="cancel")
             
     def bind_keys(self):
         self.canvas.bind("<Configure>", self.on_resize)
@@ -311,7 +234,8 @@ class ViewHelper(ctk.CTkFrame):
         # print(self.time_index, self.slice_index)
         if self.show_polygon:
             if os.path.isfile(self.mask_path):
-                self.masktopoints(self.mask_path)
+                #
+                self.points, self.scaledpoints, self.currentdottags = utils.masktopoints(self.numpoints, self.scale_factor, self.mask_path)
                 # print(path)
                 self.render_polygon()
             else:
@@ -361,8 +285,6 @@ class ViewHelper(ctk.CTkFrame):
             CTkMessagebox(master=self.window, message=f"Successfully inverted all images in {os.path.dirname(self.mask_path)}")
         else:
             return
-    
-
 
     def load_settings(self):
         if os.path.exists('save.txt'):
@@ -399,26 +321,27 @@ class ViewHelper(ctk.CTkFrame):
             # print(f"Current time:{self.time_index}, Current Slice:{self.slice_index}")
             self.delete_polygon()
             if os.path.isfile(self.mask_path):
-                self.masktopoints(self.mask_path)
+                self.points, self.scaledpoints, self.currentdottags = utils.masktopoints(self.numpoints, self.scale_factor, self.mask_path)
+
             if len(self.points) == 0:
                 return
             else:
                  # Draw lines between points
                 if len(self.scaledpoints) > 1:
                     if len(self.scaledpoints) > 2:
-                        self.PILdrawpoly()
+                        self.polygon = utils.PILdrawpoly(self.currentdottags, self.scaledpoints, [self.current_width, self.current_height], self.polygoncolor)
                         self.polytag = self.canvas.create_image(0, 0, image=self.polygon, anchor=tk.NW)
                         lowest_item_id = self.canvas.find_all()[1]
                         self.canvas.tag_lower(self.polytag, lowest_item_id)
                     for i in range(len(self.scaledpoints) - 1):
                         if "cavity" in self.currentdottags[i] and "cavity" in self.currentdottags[i+1]:
-                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
+                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=utils.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
                         else:
                             line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
                         self.lines.append(line)
                     if len(self.points) > 2 and self.points[0] != self.points[-1]:
                         if "cavity" in self.currentdottags[-1] and "cavity" in self.currentdottags[0]:
-                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
+                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=utils.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
                         else:
                             line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
                         self.lines.append(line)
@@ -430,26 +353,6 @@ class ViewHelper(ctk.CTkFrame):
                     self.canvas.delete(line)
         if self.polytag is not None:
             self.canvas.delete(self.polytag)    
-                  
-    def PILdrawpoly(self):
-        # print(self.currentdottags)
-        if len(self.currentdottags) >2:
-            dottags = self.currentdottags
-            # print(f"Switched tags:{dottags}")
-        #If cavity is present in the tag, get the index and then take it from self.scaledpoints
-
-        cavidx = [index for index, tup in enumerate(dottags) if "cavity" in tup]
-        cavitypoints = [self.scaledpoints[i] for i in cavidx]
-
-        overlay = Image.new('RGBA', (self.current_width, self.current_height), (255,255,255,0))
-        draw = ImageDraw.Draw(overlay)
-        #Draw the polygon on the image
-        draw.polygon(self.scaledpoints, fill = self.polygoncolor)
-        if len(cavitypoints)>2:
-            draw.polygon(cavitypoints, fill=self.hextocomp(self.polygoncolor))
-
-        # Display the result on the canvas
-        self.polygon = ImageTk.PhotoImage(overlay)
 
     def updateimage(self, slice_index, time_index):
         time_folder = self.time_folders[time_index]
@@ -476,42 +379,6 @@ class ViewHelper(ctk.CTkFrame):
 
         #Update label
         self.labelinfo.configure(text=f"Time: {self.time_index+1:02d}/{len(self.time_folders)}, Slice: {self.slice_index+1:02d}/{len(self.slice_files[0])}")    
-    
-    def masktopoints(self,maskpath):
-        # Load the PNG image as a grayscale image (0 means grayscale mode)
-        binary_mask = cv2.imread(maskpath, cv2.IMREAD_GRAYSCALE)
-        myocard_mask = binary_mask.copy()
-        myocard_mask[myocard_mask==127] = 0 
-        contours, _ = cv2.findContours(myocard_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-        # Get the first contour (assuming you only have one object)
-        boundary_points = contours[0]  # (N, 1, 2) array representing x, y coordinates
-
-        numpoints = self.numpoints
-        step = len(boundary_points)//numpoints
-        boundary_points = boundary_points[::step]
-        self.points = [tuple(arr.flatten()) for arr, in boundary_points]
-        if len(self.points) != 0:
-            self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
-        self.currentdottags = [("dot",)] * len(self.points)
-
-        def check_cavity_around_point(center, radius,image=binary_mask):
-            # Create a mask with the same size as the image, initialized to zeros
-            mask = np.zeros(image.shape[:2], dtype=np.uint8)
-
-            # Draw a filled circle on the mask
-            cv2.circle(mask, center, radius, 255, thickness=-1)
-
-            # Use the mask to get the region of interest from the image
-            circular_patch = cv2.bitwise_and(image, image, mask=mask)
-
-            # Check if any pixel in the circular patch has the value of 127
-            return np.any(circular_patch == 127)
-
-        for i in range(len(self.points)):
-            if check_cavity_around_point(self.points[i], 4):
-                #Set the tag to be "dot","cavity"
-                self.currentdottags[i] = ("dot","cavity")
 
 # Create the main window
 if __name__ == "__main__":
