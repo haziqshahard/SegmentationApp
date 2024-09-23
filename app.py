@@ -2,6 +2,7 @@ from tkinter import filedialog
 import os
 import sys
 from utils import *
+from CTkMenuBar import *
 
 from Segmentor import *
 from ViewHelper import *
@@ -11,9 +12,9 @@ from MaskViewer import *
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.theme = "themes/Harlequin.json"
-        darklight = "dark"
-        ctk.set_appearance_mode(darklight)
+        self.theme = "dark-blue"
+        self.darklight = "dark"
+        ctk.set_appearance_mode(self.darklight)
         ctk.set_default_color_theme(self.theme)
         self.settings = {}
         self.base_path = None
@@ -41,16 +42,17 @@ class App(ctk.CTk):
         self.bottomrow.grid_columnconfigure(1, weight=1)
         self.bottomrow.grid_columnconfigure(0, weight=1)
 
-        self.segmentor = PolygonDrawer(self, row=0, column=0,darklight=darklight)
-        self.viewhelper = ViewHelper(self, row=0, column=1,darklight=darklight)
-        self.caseselector = CaseSelector(self.bottomrow, row=0, column=0,theme=self.theme,darklight=darklight)
-        self.maskviewer = MaskViewer(self.bottomrow, row=0,column=1,theme=self.theme,darklight=darklight)
+        self.segmentor = PolygonDrawer(self, row=0, column=0,darklight=self.darklight)
+        self.viewhelper = ViewHelper(self, row=0, column=1,darklight=self.darklight)
+        self.caseselector = CaseSelector(self.bottomrow, row=0, column=0,theme=self.theme,darklight=self.darklight)
+        self.maskviewer = MaskViewer(self.bottomrow, row=0,column=1,theme=self.theme,darklight=self.darklight)
         # self.maskviewer.configure(fg_color="white",corner_radius=0)
         # self.caseselector.configure(height=5)
         
         self.title("Segmentor App")
         self.protocol("WM_DELETE_WINDOW", lambda d="delete": saveeverything(d))
-
+        self.bind("<Control-d>", self.switchDarkmode)
+        # self.bind("<Control-t>", self.switchtheme)
         self.bind("<Configure>", self.on_resize)
         self.bind("<Right>", self.on_key_press)
         self.bind("<Left>", self.on_key_press)
@@ -115,6 +117,14 @@ class App(ctk.CTk):
         self.image_path = self.image_path.replace('\\', '/')
         # print(f"Loading image: {image_path}")  # Debugging 
 
+    def switchDarkmode(self,event):
+        if self.darklight == "dark":
+            ctk.set_appearance_mode("light")
+            self.darklight = "light"
+        else:
+            ctk.set_appearance_mode("dark")
+            self.darklight = "dark"
+            
 if __name__ == "__main__":
     app = App()
     # app.mainloop()

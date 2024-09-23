@@ -147,7 +147,8 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.bind("<B1-Motion>", self.do_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
         self.canvas.bind("<Button-3>", self.handle_right_click)
-        self.canvas.bind("<Button-2>", self.switchplacecavity)
+        self.window.bind("<C>", self.switchplacecavity)
+        self.window.bind("<c>", self.switchplacecavity)
 
         self.window.bind("<a>", self.on_key_press)
         self.window.bind("<d>", self.on_key_press)
@@ -406,23 +407,22 @@ class PolygonDrawer(ctk.CTkFrame):
         self.updateimage(self.slice_index, self.time_index)
 
     def switchplacecavity(self,event):
-        x,y = event.x, event.y #Collect coords of event based on the current scale
         clicked_items = self.canvas.find_withtag("current")
-
-        coords = (x,y)
-
         if clicked_items and "dot" in self.canvas.gettags(clicked_items[0]):
             if "cavity" in self.canvas.gettags(clicked_items[0]):
                 self.canvas.itemconfig(clicked_items[0], tags=("dot","myocardium"))         
                 #Have to remove it from the scaledcavitypoints, then 
             elif "myocardium" in self.canvas.gettags(clicked_items[0]):
                 self.canvas.itemconfig(clicked_items[0], tags=("dot","cavity"))
+        elif clicked_items == False:
+            return
+        self.currentdottags = [self.canvas.gettags(dot) for dot in self.dots]
+        self.redraw_polygon()
+    
+    def addcavitybtwline(self, event):
+        clicked_items = self.canvas.find_withtag("current")
         if clicked_items and "line" in self.canvas.gettags(clicked_items[0]):
             self.pointbtwline(event,clicked_items[0], type="cavity")
-        elif clicked_items == False:
-            # self.add_point(event,type="cavity")
-            # Dont do anything
-            return
         self.currentdottags = [self.canvas.gettags(dot) for dot in self.dots]
         self.redraw_polygon()
 
@@ -538,10 +538,11 @@ class PolygonDrawer(ctk.CTkFrame):
         end_point_index = (line_index + 1) % len(self.points)
         if end_point_index == 0:
             end_point_index = len(self.points)
-        
+
+               
         self.scaledpoints.insert(end_point_index, (new_x, new_y))
         self.points.insert(end_point_index, (new_x/self.scale_factor,new_y/self.scale_factor))
-        
+        pointtags = [self.currentdottags[end_point_index-1],self.currentdottags[end_point_index] ]
         # Remove the old line since it will be replaced by two new lines
         self.canvas.delete(line)
         self.lines.pop(line_index)
@@ -568,6 +569,8 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.tag_bind(line2, "<Leave>", lambda e, l=line2: self.on_line_hover_leave(e, l))
         
         # Draw the new dot at the clicked position
+        if all("cavity" in tag for tag in pointtags):
+            type = "cavity"
         dot = self.draw_point(new_x, new_y,type=type)
         self.dots.insert(end_point_index, dot)
         self.currentdottags.insert(end_point_index, self.canvas.gettags(dot))
