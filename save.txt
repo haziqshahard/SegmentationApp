@@ -1,4 +1,4 @@
-points=[(257, 55), (240, 58), (223, 66), (209, 82), (197, 99), (187, 116), (179, 133), (172, 150), (168, 167), (166, 184), (166, 201), (167, 218), (173, 235), (182, 252), (195, 250), (192, 233), (185, 216), (183, 199), (183, 182), (186, 165), (190, 148), (196, 131), (206, 114), (218, 97), (231, 81), (248, 75), (265, 76), (282, 84), (292, 98), (296, 115), (293, 132), (291, 149), (291, 166), (290, 183), (289, 200), (292, 217), (295, 234), (299, 251), (315, 254), (314, 237), (310, 220), (307, 203), (307, 186), (307, 169), (309, 152), (312, 135), (318, 118), (319, 101), (313, 84), (297, 69), (280, 59), (263, 56)]
+points=[]
 dotcolor=#70adff
 dothovercolor=#38567f
 linecolor=#3f99ff
@@ -8,4 +8,4 @@ dotsize=5
 linewidth=3
 smoothing=100
 numpoints=50
-paths=[['C:/Users/haziq/OneDrive - Imperial College London/Modules/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Results/21092021P2_3', 'notcompleted']]
+paths=[['C:/Users/haziq/OneDrive - Imperial College London/Modules/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Results/21092021P2_3', 'notcompleted'], ['C:/Users/haziq/OneDrive - Imperial College London/Modules/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Results/07SEP2021P2_1', 'notcompleted'], ['C:/Users/haziq/OneDrive - Imperial College London/Modules/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Results/TOF 05 AUG 2016 P1A (one week after followup)[Part of MYO missing]', 'notcompleted'], ['C:/Users/haziq/OneDrive - Imperial College London/Modules/Third Year/Fetal VR Group Project/Files/Rotated Files/HAZIQ/Results/TOF 24JUN2016 P1', 'notcompleted']]

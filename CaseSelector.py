@@ -4,6 +4,7 @@ import os
 from CTkMessagebox import CTkMessagebox
 import ast
 import webbrowser
+import utils
 class CaseSelector(ctk.CTkFrame):
     """Window that enables the user to select cases by opening the folders
     Window then saves the file path and displays it.
@@ -98,6 +99,7 @@ class CaseSelector(ctk.CTkFrame):
                 self.paths += [[str(self.base_path),"notcompleted"]]
                 self.createbutton(self.base_path)
                 self.renderbuttons()
+                self.savecases()
             else:
                 self.selectcase()
         return
@@ -118,7 +120,6 @@ class CaseSelector(ctk.CTkFrame):
         # Step 4: Write the updated content back to the file
         with open('save.txt', 'w') as file:
             file.writelines(lines)
-        
         if self.debug == False:
             return
         else:
@@ -168,7 +169,7 @@ class CaseSelector(ctk.CTkFrame):
                 if item in inner_list][0][0]
 
     def createbutton(self, path):
-        print(path)
+        # print(path)
         components = path.split("/")
         case = os.path.join(components[-2], components[-1])
         btn = ctk.CTkButton(master=self.scrollframe, height=30, text=f"{case}", 
@@ -202,6 +203,8 @@ class CaseSelector(ctk.CTkFrame):
         if self.debug == False:
             if len(self.paths) == 0:
                 self.selectcase()
+        
+        self.savecases()
 
     def switchcompleted(self, pathidx):
         button = self.buttons[pathidx]
@@ -237,9 +240,10 @@ class CaseSelector(ctk.CTkFrame):
             button.configure(border_color = "white", border_width=2)
         if self.debug == False: 
             self.window.master.base_path = self.paths[pathidx][0]
-            image_path = os.path.join(self.window.master.base_path, "time001", 'slice001time001.png')
+            self.window.master.slice_files, self.window.master.time_folders = utils.load_images(self.window.master.base_path)
+            self.window.master.current_time = int(self.window.master.slice_files[0][0][12:15])
+            image_path = os.path.join(self.window.master.base_path, f"time{self.window.master.current_time:03d}", f'slice001time{self.window.master.current_time:03d}.png')
             self.window.master.image_path = image_path.replace('\\', '/')
-            
             self.window.master.segmentor.update()
             self.window.master.viewhelper.update()
             self.window.master.maskviewer.update()

@@ -12,24 +12,36 @@ from MaskViewer import *
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.theme = "dark-blue"
+        self.theme = "dark-blue"ss
         self.darklight = "dark"
         ctk.set_appearance_mode(self.darklight)
         ctk.set_default_color_theme(self.theme)
         self.settings = {}
         self.base_path = None
         self.preloadcases()
+        # Make the window fullscreen on the monitor
+        self.attributes('-fullscreen', True)
+
+        # Optionally, you can bind the 'Esc' key to exit fullscreen
+        def exit_fullscreen(event=None):
+            self.attributes('-fullscreen', False)
+
+        self.bind("<Escape>", exit_fullscreen)
+
+
         
         self.original_width = self.winfo_width()
         self.original_height = self.winfo_height()
 
-        self.current_slice = 1
-        self.slice_index = 0
-        self.current_time = 1
-        self.time_index = 0
-
         self.slice_files, self.time_folders = utils.load_images(self.base_path)
-        self.load_image()
+        # print(self.slice_files)
+        # print(self.time_folders)
+
+        self.current_slice = 1
+        self.current_time = int(self.slice_files[0][0][12:15])
+        self.time_index = self.time_folders.index(f"time{self.current_time:03d}")
+        self.slice_index = self.slice_files[self.time_index].index(f"slice{self.current_slice:03d}time{self.current_time:03d}.png")
+        self.load_image(slice_index = self.slice_index, time_index = self.time_index)
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
