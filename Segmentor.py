@@ -70,14 +70,17 @@ class PolygonDrawer(ctk.CTkFrame):
             self.image_path = filedialog.askopenfilename(title="Select an image")
         self.current_slice = int(os.path.basename(self.image_path)[5:8])
         self.current_time = int(os.path.basename(self.image_path)[12:15])
-
-        self.slice_index = self.current_slice - 1
-        self.time_index = self.current_time -1
         
         self.base_path = "/".join(self.image_path.split("/")[:-2])
         self.pilimage = Image.open(self.image_path)
         self.photo = ImageTk.PhotoImage(self.pilimage)
         self.slice_files, self.time_folders = utils.load_images(self.base_path)
+
+        #Just get these from the slice/time folders
+            #For time index, check the index from the time folder
+
+        self.time_index = self.time_folders.index(f"time{self.current_time:03d}")
+        self.slice_index = self.slice_files[self.time_index].index(f"slice{self.current_slice:03d}time{self.current_time:03d}.png")
         
         #ORIGINAL SCALE INFORMATION
         self.original_width = self.pilimage.width

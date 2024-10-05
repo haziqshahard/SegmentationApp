@@ -168,7 +168,9 @@ class CaseSelector(ctk.CTkFrame):
                 if item in inner_list][0][0]
 
     def createbutton(self, path):
-        case = os.path.basename(os.path.normpath(path))
+        print(path)
+        components = path.split("/")
+        case = os.path.join(components[-2], components[-1])
         btn = ctk.CTkButton(master=self.scrollframe, height=30, text=f"{case}", 
                             font=(self.font,self.fontsize),anchor="w")
         btn.bind("<Button-1>", command=lambda event, path=path: self.loadcase(event, path = path))
