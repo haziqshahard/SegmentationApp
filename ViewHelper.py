@@ -66,6 +66,7 @@ class ViewHelper(ctk.CTkFrame):
         self.scaledpoints = []
         self.lines=[]
         self.polytag = None
+        self.numpoints = 50
 
         self.line_width = 3
         self.linecolor = "#001C55"

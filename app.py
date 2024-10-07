@@ -12,7 +12,7 @@ from MaskViewer import *
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.theme = "dark-blue"ss
+        self.theme = "dark-blue"
         self.darklight = "dark"
         ctk.set_appearance_mode(self.darklight)
         ctk.set_default_color_theme(self.theme)
