@@ -1,6 +1,6 @@
 # SegmentationApp
 
-SegmentationApp is a Python-based tool designed for performing image segmentation using advanced techniques like U-Net. This app allows for interactive segmentation, visualization, and analysis of images in real time.
+SegmentationApp is a Python-based tool designed for performing  manual image segmentation. This app allows for interactive segmentation, visualization, and analysis of images in real time.
 
 ## Features
 
