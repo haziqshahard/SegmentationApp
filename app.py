@@ -27,8 +27,6 @@ class App(ctk.CTk):
             self.attributes('-fullscreen', False)
 
         self.bind("<Escape>", exit_fullscreen)
-
-
         
         self.original_width = self.winfo_width()
         self.original_height = self.winfo_height()

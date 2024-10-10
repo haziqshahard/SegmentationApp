@@ -4,12 +4,18 @@ SegmentationApp is a Python-based tool designed for performing image segmentatio
 
 ## Features
 
-- Multi-class image segmentation using U-Net architecture.
-- Interactive UI for segmentation tasks.
+- Myocardium and cavity manual segmentation using an interactive GUI.
 - Real-time visualization of segmentation results.
-- Support for images of varying dimensions.
-- Customizable preprocessing and augmentation pipeline.
+- Customizable colors and options to enhance UX. 
+- Ability to edit segmentations efficiently while viewing myocardium movements spatially and temporally.
 - Ability to toggle different layers and adjust segmentation settings.
+- Case selector for quick switching of cases, with saved progress and completion. 
+
+## Datasets
+- Ensure that your dataset is structured properly as shown below.
+
+- **Example Structure:**
+![Case Structure](./images/casestructure.png)
 
 ## Installation
 
@@ -31,29 +37,22 @@ SegmentationApp is a Python-based tool designed for performing image segmentatio
     ```bash
     python app.py
     ```
-
-2.Images must be of the format:
-![Image Folder structure](./images/casestructure.png)
-
-3. Load your images via the UI and start the segmentation process.
+2. Load your images via the UI and start the segmentation process by:
+- Placing dots to create a fresh mask, which is then saved for the respective time. 
+- Editing already existing masks to ensure fit
+- Allocating cavity myocardium by holding down "c"
+- Viewing ultrasound scans spatially and temporally to better understand myocardium positioning.
 
 ### Example Usage
 
-- **Step 1:** Load the image.
+- **Step 1:** Load the Case.
 - **Step 2:** Adjust settings and perform segmentation.
 - **Step 3:** View real-time results and save segmented output.
 
-*Include video or GIF of segmentation in action*
+![Segmentation Application Demo](./images/appdemo.gif)
 
 ## Customization
 
-You can customize the following in `config.py`:
-- Model architecture
-- Loss functions
-- Data augmentation techniques
-
-## Datasets
-
-- The app supports various image datasets. Ensure that your dataset is structured properly (e.g., different folders for training, validation, etc.).
-
-- **Example Structure:**
+You can customize the following:
+- Dot, Line and Polygon Color
+- Dot and Line size
