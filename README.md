@@ -15,8 +15,21 @@ SegmentationApp is a Python-based tool designed for performing image segmentatio
 - Ensure that your dataset is structured properly as shown below.
 
 - **Example Structure:**
-
-![Case Structure](./images/casestructure.png)
+- Case1
+    -time001
+        -segmented
+            -Segmented Slice001.png
+            -Segmented Slice002.png
+            -...
+        -slice001time001.png
+        -slice002time001.png
+        -...
+    -time002
+    -...
+-Case2
+    -time001
+    -time002
+    -...
 
 ## Installation
 
