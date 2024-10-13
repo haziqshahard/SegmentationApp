@@ -11,11 +11,7 @@ from MaskViewer import *
 
 class App(ctk.CTk):
     """
-    Can implement undo 
     Increase size of cursor when holding c down
-
-    #Reduce line size in the view helper
-    #Make it so you can see the images folder
     """
     def __init__(self):
         super().__init__()
@@ -75,6 +71,10 @@ class App(ctk.CTk):
         self.bind("<Left>", self.on_key_press)
         self.bind("<Up>", self.on_key_press)
         self.bind("<Down>", self.on_key_press)
+        self.bind("<A>", self.on_key_press)
+        self.bind("<a>", self.on_key_press)
+        self.bind("<D>", self.on_key_press)
+        self.bind("<d>", self.on_key_press)
 
         def saveeverything(d):
             self.segmentor.save_settings(d)
@@ -93,6 +93,7 @@ class App(ctk.CTk):
         self.bottomrow.grid_columnconfigure(0, minsize=caseselectorminsize)
 
     def on_key_press(self, event):
+        self.segmentor.on_key_press(event)
         self.maskviewer.on_key_press(event)
         self.viewhelper.on_key_press(event)
         

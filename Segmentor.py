@@ -158,12 +158,12 @@ class PolygonDrawer(ctk.CTkFrame):
         self.window.bind("<C>", self.switchplacecavity)
         self.window.bind("<c>", self.switchplacecavity)
 
-        self.window.bind("<a>", self.on_key_press)
-        self.window.bind("<d>", self.on_key_press)
-        self.window.bind("<A>", self.on_key_press)
-        self.window.bind("<D>", self.on_key_press)
-
-        self.window.focus_set()
+        if self.debug == True:
+            self.window.bind("<a>", self.on_key_press)
+            self.window.bind("<d>", self.on_key_press)
+            self.window.bind("<A>", self.on_key_press)
+            self.window.bind("<D>", self.on_key_press)
+        self.focus_set()
 
         #-------CONTEXT MENU-------
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
@@ -258,7 +258,7 @@ class PolygonDrawer(ctk.CTkFrame):
 
     def update(self):
         self.destroy()
-        PolygonDrawer(self.window, row=0, column=0)
+        self.window.segmentor = PolygonDrawer(self.window, row=0, column=0)
 
     def on_resize(self,event):
          #Implemented from https://www.tutorialspoint.com/how-to-set-the-canvas-size-properly-in-tkinter
@@ -403,6 +403,7 @@ class PolygonDrawer(ctk.CTkFrame):
 
     def on_key_press(self,event):
         self.updateswitchpoints()
+        # print(f"Key pressed: {event.keysym}")  # Debugging line
 
         if event.keysym == "a" or event.keysym =="A":
             self.slice_index = (self.slice_index - 1) % len(self.slice_files[self.time_index])
@@ -436,8 +437,6 @@ class PolygonDrawer(ctk.CTkFrame):
         self.redraw_polygon()
 
     def updateimage(self, slice_index, time_index):
-        self.current_slice = slice_index +1
-        self.current_time = time_index+1
         time_folder = self.time_folders[time_index]
         slice_file = self.slice_files[time_index][slice_index]
         image_path = os.path.join(self.base_path, time_folder, slice_file)
@@ -461,6 +460,8 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.itemconfig(self.canvimg, image=self.scaled_photo)
 
         #Update label
+        self.current_slice = int(os.path.basename(image_path)[5:8])
+        self.current_time = int(os.path.basename(image_path)[12:15])
         self.filelabel.configure(text=f"Time:{self.current_time:02d}/{len(self.time_folders)}, Slice:{self.current_slice:02d}/{len(self.slice_files[0])}")    
             
         self.edit_mode()

@@ -24,11 +24,11 @@ class ViewHelper(ctk.CTkFrame):
     shouldn't need constant toggling in order to show the thing
 
     #
-    Switch the viewhelper to look at the iamges rather than the results
+    Switch the viewhelper to look at the images rather than the results when you can 
     Sync the viewhelper to the segmentor:
         When hitting a or d, change viewhelper to whatever is on segmentor
         If hitting arrows, just change the viewhelper
-
+    Line size needs to match the segmentor
     """
     def __init__(self, window, debug=False, row=1, column=0,darklight="dark"):
         super().__init__(window)
@@ -75,7 +75,7 @@ class ViewHelper(ctk.CTkFrame):
         self.polytag = None
         self.numpoints = 50
 
-        self.line_width = 3
+        self.line_width = 1
         self.linecolor = "#001C55"
         self.polygoncolor = (0,0,255,int(0.2*255))
 
@@ -233,11 +233,20 @@ class ViewHelper(ctk.CTkFrame):
         elif event.keysym == "Down":
             self.time_index = (self.time_index - 1) % len(self.time_folders)
         elif event.keysym == "Left":
-            self.slice_index = (self.slice_index - 1) % len(self.slice_files[self.time_index])
+            #If A or D, needs to get the segmentor slice and time and just do that
+            self.slice_index = (self.slice_index - 1) % len(self.slice_files[self.time_index])                
         elif event.keysym == "Right":
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
 
+        if self.debug == False and (event.keysym == "A" or event.keysym == "a" or event.keysym == "D" or event.keysym == "d"):
+            self.slice_index = self.window.segmentor.slice_index
+            self.time_index = self.window.segmentor.time_index
+
         self.updateimage(self.slice_index, self.time_index)
+        if self.debug == False:
+            self.window.maskviewer.slice_index = self.slice_index
+            self.window.maskviewer.time_index = self.time_index
+            self.window.maskviewer.loadimg()
 
         time_folder = self.time_folders[self.time_index]
         
@@ -281,8 +290,15 @@ class ViewHelper(ctk.CTkFrame):
             # print("Switching base path")
             self.base_path = base_path
             self.slice_files, self.time_folders = utils.load_images(self.base_path)
+            self.slice_index = 0
+            self.time_index = 0
             self.load_image(self.slice_index, self.time_index)
-
+            if self.debug == False:
+                self.window.maskviewer.base_path = self.base_path
+                self.window.maskviewer.slice_index = 0
+                self.window.maskviewer.time_index = 0
+                self.window.maskviewer.loadimg()
+            self.labelinfo.configure(text=f"Time: {self.time_index+1:02d}/{len(self.time_folders)}, Slice: {self.slice_index+1:02d}/{len(self.slice_files[0])}")   
         #This needs to also update the mask viewer so that it matches
 
     def invert_masks(self):
@@ -338,7 +354,6 @@ class ViewHelper(ctk.CTkFrame):
                     self.polygoncolor = ast.literal_eval(self.settings.get('polygoncolor'))
                 except:
                     self.polygoncolor = None
-
 
     def toggle_polygon(self):
         #check if the segmented mask even exists

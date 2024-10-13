@@ -42,7 +42,6 @@ class MaskViewer(ctk.CTkFrame):
         self.scale_factor = 1
 
         # Load base path and images
-
         if debug==False:
             self.base_path = self.window.master.base_path
         elif debug ==True:
@@ -52,7 +51,9 @@ class MaskViewer(ctk.CTkFrame):
             self.window.bind("<Left>", self.on_key_press)
             self.window.bind("<Up>", self.on_key_press)
             self.window.bind("<Down>", self.on_key_press)
+        self.loadimg()
 
+    def loadimg(self):
         # Load the initial image
         self.slice_files, self.time_folders = utils.load_images(self.base_path)
         self.load_image(self.slice_index, self.time_index)
@@ -63,6 +64,10 @@ class MaskViewer(ctk.CTkFrame):
         self.window.master.maskviewer = MaskViewer(self.window, row=0, column=1)
 
     def loadmask(self):
+        """
+        This function loads available masks, and displays a message ifelse
+        """
+
         if os.path.isfile(self.mask_path):
             self.img = Image.open(self.mask_path) # Resize the image for display
             self.photo = ImageTk.PhotoImage(self.img)
