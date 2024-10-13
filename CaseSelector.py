@@ -9,6 +9,8 @@ class CaseSelector(ctk.CTkFrame):
     """Window that enables the user to select cases by opening the folders
     Window then saves the file path and displays it.
     Goes into save.txt with all the case files so that when it is next opened, can just be clicked and it will appear
+
+    #ADD "CREATE DATASET" BUTTON
     """
     def __init__(self, window, debug=False, row=1, column=0, theme="blue",darklight="dark"):
         super().__init__(window)
@@ -105,6 +107,7 @@ class CaseSelector(ctk.CTkFrame):
         return
     
     def savecases(self):
+        # print("Saving Cases")
         with open('save.txt', "r") as f:
             lines = f.readlines()
             # Step 2: Check if 'paths' exists and update it
@@ -185,6 +188,7 @@ class CaseSelector(ctk.CTkFrame):
         context_menu = tk.Menu(self.root, tearoff=0)
         context_menu.add_command(label="Delete Case", command=lambda: self.delete_button(pathidx))
         context_menu.add_command(label="Mark Completed",command = lambda: self.switchcompleted(pathidx))
+        context_menu.add_command(label="Open Folder",command = lambda: os.startfile(path))
 
         context_menu.tk_popup(event.x_root, event.y_root)
 
@@ -216,6 +220,8 @@ class CaseSelector(ctk.CTkFrame):
             button.configure(fg_color="green4", hover_color="darkolivegreen4")
             # print(self.paths[pathidx])
             self.paths[pathidx][1] = "completed"
+        
+        self.savecases()
 
     def markcompleted(self, pathidx):
         button = self.buttons[pathidx]
@@ -225,6 +231,7 @@ class CaseSelector(ctk.CTkFrame):
             button.configure(fg_color="green4", hover_color="darkolivegreen4")
         else:
             button.configure(fg_color=self.fg_color[1], hover_color = self.hover_color[1])
+
     
     def loadcase(self, event, path):
         # print(self.buttons)

@@ -22,6 +22,13 @@ class ViewHelper(ctk.CTkFrame):
     ISSUES:
     render_polygon has to show the polygon if it exists, and not show it if it doesnt
     shouldn't need constant toggling in order to show the thing
+
+    #
+    Switch the viewhelper to look at the iamges rather than the results
+    Sync the viewhelper to the segmentor:
+        When hitting a or d, change viewhelper to whatever is on segmentor
+        If hitting arrows, just change the viewhelper
+
     """
     def __init__(self, window, debug=False, row=1, column=0,darklight="dark"):
         super().__init__(window)
@@ -145,6 +152,7 @@ class ViewHelper(ctk.CTkFrame):
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
         self.context_menu.add_command(label="Toggle Drawn Polygon", command=self.toggle_polygon)
         self.context_menu.add_command(label="Invert All Folder Masks", command=self.invert_masks)
+        self.context_menu.add_command(label="Switch to Images/Results", command=self.switchimgreslts)
 
         self.bind_keys()
         self.window.focus_set()
@@ -257,10 +265,30 @@ class ViewHelper(ctk.CTkFrame):
         if not clicked_items or ("dot" not in self.canvas.gettags(clicked_items[0]) and 
                                  "line" not in self.canvas.gettags(clicked_items[0])):
             self.context_menu.post(event.x_root, event.y_root)
+    
+    def switchimgreslts(self):
+        base_path = os.path.dirname(self.base_path)
+        last_folder_name = os.path.basename(os.path.normpath(base_path))
+        if last_folder_name == "Results":
+            base_path = os.path.join(os.path.dirname(base_path), "Images",os.path.basename(os.path.normpath(self.base_path)))
+        if last_folder_name == "Images":
+            base_path = os.path.join(os.path.dirname(base_path), "Results",os.path.basename(os.path.normpath(self.base_path)))
+        
+        base_path = base_path.replace("/", "\\")
+        # print(base_path)
+
+        if os.path.exists(base_path):
+            # print("Switching base path")
+            self.base_path = base_path
+            self.slice_files, self.time_folders = utils.load_images(self.base_path)
+            self.load_image(self.slice_index, self.time_index)
+
+        #This needs to also update the mask viewer so that it matches
 
     def invert_masks(self):
         def invert_images_in_folder(folder_path):
             # Loop through all files in the specified folder
+            self.window.configure(cursor="watch")
             for filename in os.listdir(folder_path):
                 # Construct full file path
                 file_path = os.path.join(folder_path, filename)
@@ -286,6 +314,7 @@ class ViewHelper(ctk.CTkFrame):
         
         if response == "Yes":
             invert_images_in_folder(os.path.dirname(self.mask_path))
+            self.window.configure(cursor="arrow")
             CTkMessagebox(master=self.window, message=f"Successfully inverted all images in {os.path.dirname(self.mask_path)}")
         else:
             return

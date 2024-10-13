@@ -58,7 +58,6 @@ class MaskViewer(ctk.CTkFrame):
         self.load_image(self.slice_index, self.time_index)
         self.canvas.bind("<Configure>", self.on_resize)
 
-
     def update(self):
         self.destroy()
         self.window.master.maskviewer = MaskViewer(self.window, row=0, column=1)

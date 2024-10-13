@@ -10,6 +10,13 @@ from CaseSelector import *
 from MaskViewer import *
 
 class App(ctk.CTk):
+    """
+    Can implement undo 
+    Increase size of cursor when holding c down
+
+    #Reduce line size in the view helper
+    #Make it so you can see the images folder
+    """
     def __init__(self):
         super().__init__()
         self.theme = "dark-blue"
@@ -21,7 +28,7 @@ class App(ctk.CTk):
         self.preloadcases()
         # Make the window fullscreen on the monitor
         self.attributes('-fullscreen', True)
-
+    
         # Optionally, you can bind the 'Esc' key to exit fullscreen
         def exit_fullscreen(event=None):
             self.attributes('-fullscreen', False)

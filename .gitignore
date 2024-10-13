@@ -4,4 +4,5 @@ build.txt
 oldsave.txt
 save.txt
 SegmentorApp.rar
-
+bestcheckpoint.pth
+UNET.py

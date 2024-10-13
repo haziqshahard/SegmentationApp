@@ -27,6 +27,10 @@ class PolygonDrawer(ctk.CTkFrame):
         Edit mode: Checks to see the existence of segmented, and allows for redrawing and then saving.
     Features:
     Implement a dragging path to automatically convert any points within to cavity
+
+    #BUG:
+    When deleting a point, and trying to place a new point on that line, it bugs out.
+    When saving mask, just print it somewhere on the segmentor, rather than bringing up the ctktoplevel
     """
     def __init__(self,window, image_path="", debug=False, row=1, column=0,darklight="dark"):
         super().__init__(window)
@@ -150,6 +154,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.bind("<B1-Motion>", self.do_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
         self.canvas.bind("<Button-3>", self.handle_right_click)
+        self.canvas.configure(cursor="circle")
         self.window.bind("<C>", self.switchplacecavity)
         self.window.bind("<c>", self.switchplacecavity)
 
@@ -170,6 +175,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.context_menu.add_command(label="Redraw/Save Settings", command = self.redrawsave_settings)
         self.context_menu.add_command(label="Polygon Color", command=self.polygon_colorset)
         self.context_menu.add_separator()
+        # self.context_menu.add_command(label="Auto-Segment(WIP)", command=self.autosegment)
         self.context_menu.add_command(label="Toggle Edit/Draw Mode", command=self.toggle_mode)
         self.context_menu.add_command(label="Refresh Current Edit Segmentation",command=self.edit_mode)
         self.context_menu.add_command(label="Bring Previous", command = self.previous_poly)
@@ -880,6 +886,24 @@ class PolygonDrawer(ctk.CTkFrame):
 
         if delete == "delete":
             self.window.destroy()   
+
+    # def autosegment(self):
+    #     from torch import device, cuda, load, unsqueeze, from_numpy, tensor,argmax,unique
+    #     import UNET
+    #     model = UNET.UNET(in_channels = 1, out_channels = 3, features = [128,256,512,1024])
+    #     device = device('cuda') if cuda.is_available() else "cpu"
+    #     model = model.to(device)
+    #     model.load_state_dict(load(f'./bestcheckpoint.pth', map_location=device))
+    #     mask = model(tensor(np.array(self.pilimage)).unsqueeze(0).unsqueeze(0).float())
+    #     mask = argmax(mask.squeeze(),dim=0).squeeze()
+    #     mask[mask==1]=127
+    #     mask[mask==2]=255
+    #     print(unique(mask))
+    #     img = Image.fromarray(mask.numpy().astype(np.uint8))
+    #     img.save('mask.png')
+    #     self.pilimage.save('image.png')
+    #     del device, cuda, load, unsqueeze, from_numpy, tensor
+    #     del UNET
 
     def toggle_mode(self):
         if self.current_mode == "Draw":
