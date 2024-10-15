@@ -1021,7 +1021,7 @@ class PolygonDrawer(ctk.CTkFrame):
                     smoothcav_coords = expand_polygon(smoothcav_coords, 2)
                     cavity = True
                 else:
-                    CTkMessagebox(master=self.window, message="Too few Cavity points selected, please add more",icon="warning")
+                    CTkMessagebox(master=self.window, message="Please use \"C\" to allocate cavity points before saving",icon="warning")
 
                 #Drawing myocardium
                 pointsnp = np.array(self.points)
