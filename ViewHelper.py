@@ -357,11 +357,7 @@ class ViewHelper(ctk.CTkFrame):
 
     def toggle_polygon(self):
         #check if the segmented mask even exists
-        if self.show_polygon:
-            self.show_polygon = False
-            # print("NOT Showing polygon")
-        else:
-            self.show_polygon = True
+        self.show_polygon = not self.show_polygon
         self.render_polygon()
     
     def render_polygon(self):
@@ -370,7 +366,6 @@ class ViewHelper(ctk.CTkFrame):
             self.delete_polygon()
             if os.path.isfile(self.mask_path):
                 self.points, self.scaledpoints, self.currentdottags = utils.masktopoints(self.numpoints, self.scale_factor, self.mask_path)
-
             if len(self.points) == 0:
                 return
             else:
@@ -393,6 +388,7 @@ class ViewHelper(ctk.CTkFrame):
                         else:
                             line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
                         self.lines.append(line)
+            
         else:
             self.delete_polygon()
 

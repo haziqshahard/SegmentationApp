@@ -1070,12 +1070,15 @@ class PolygonDrawer(ctk.CTkFrame):
                         os.makedirs(folder_path)  # Creates folder and intermediate directories if they don't exist
                     impath = folder_path + "/Segmented Slice" + f"{self.current_slice:03d}" + ".png"
                     mask.save(impath)
+                    # label = ctk.CTkLabel(self.window.inforow, text=f"Edited Mask saved to {segmentedslice}", text_color="blue")
+                    # label.grid(row=0, column=0, sticky="nse")
                     CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
                 elif self.current_mode == "Edit" and self.debug == False:
                     folder = os.path.dirname(self.image_path) + "/segmented"
                     segmentedslice = folder + f"/Segmented Slice{self.current_slice:03d}.png"
-
                     mask.save(segmentedslice)
+                    # label = ctk.CTkLabel(self.window.inforow, text=f"Edited Mask saved to {segmentedslice}", text_color="blue")
+                    # label.grid(row=0, column=0, sticky="nse")
                     CTkMessagebox(title="Edited Mask Save",message = f"Edited Mask saved to {segmentedslice}", icon='check')
 
     #----------HOVER EVENTS----------

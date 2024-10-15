@@ -5,12 +5,13 @@ from CTkMessagebox import CTkMessagebox
 import ast
 import webbrowser
 import utils
+import shutil
+import re
+import threading
 class CaseSelector(ctk.CTkFrame):
     """Window that enables the user to select cases by opening the folders
     Window then saves the file path and displays it.
     Goes into save.txt with all the case files so that when it is next opened, can just be clicked and it will appear
-
-    #ADD "CREATE DATASET" BUTTON
     """
     def __init__(self, window, debug=False, row=1, column=0, theme="blue",darklight="dark"):
         super().__init__(window)
@@ -52,7 +53,10 @@ class CaseSelector(ctk.CTkFrame):
 
         self.buttons = []
 
-        btn = ctk.CTkButton(master=self.root,text="Select Case", command=self.selectcase, font=(self.font,self.fontsize*self.scale_factor))
+        btndialog = ctk.CTkFrame(master=self.root)
+        btndialog.grid(row=1, column=0, sticky="se", padx = 5)
+        btn = ctk.CTkButton(master=btndialog,text="Select Case", command=self.selectcase, font=(self.font,self.fontsize*self.scale_factor))
+        btn2 = ctk.CTkButton(master=btndialog,text="Create Dataset", command=self.open_transfer_window, font=(self.font,self.fontsize*self.scale_factor))
 
         def open_url(url):
             webbrowser.open_new(url)
@@ -75,7 +79,8 @@ class CaseSelector(ctk.CTkFrame):
         self.fg_color = getattr(btn, "_fg_color")
         self.hover_color = getattr(btn, "_hover_color")
         self.originalborder = btn.cget("border_color")  
-        btn.grid(row=1, column=0, padx=10, pady=10, sticky="se")
+        btn.grid(row=0, column=1, padx=10, pady=10, sticky="se")
+        btn2.grid(row=0, column=0, padx=10, pady=10, sticky="se")
 
         self.selectedbutton = None
 
@@ -106,6 +111,114 @@ class CaseSelector(ctk.CTkFrame):
                 self.selectcase()
         return
     
+    def open_transfer_window(self):
+        msg = CTkMessagebox(master=self.window, title="Create Dataset", message=f"Do you want to create a dataset from all the completed cases?",
+                        icon="warning", option_1="Cancel", option_3="Yes")
+        response = msg.get()
+
+        if response == "Yes":
+            # Open a new window to show the transfer progress
+            self.transfer_window = ctk.CTkToplevel(self)
+            self.transfer_window.title("File Transfer Progress")
+            self.transfer_window.geometry("400x200")
+
+            # Add a label to display progress updates
+            self.progress_label = ctk.CTkLabel(self.transfer_window, text="Starting transfer...")
+            self.progress_label.pack(pady=10)
+
+            # Add a progress bar for file transfer
+            self.progress_bar = ctk.CTkProgressBar(self.transfer_window)
+            self.progress_bar.pack(pady=20)
+            self.progress_bar.set(0)  # Initialize progress bar to 0
+
+            # Run the file transfer in a separate thread
+            transfer_thread = threading.Thread(target=self.create_dataset)
+            transfer_thread.start()
+        else:
+            return
+
+    def create_dataset(self):
+        dir = tk.filedialog.askdirectory(title="Select the Folder to Create the dataset within")
+        valid_extensions = (".png", ".jpg", ".jpeg")
+        dataset_dir = os.path.join(dir, "dataset")
+
+        # Ensure the dataset directory exists
+        os.makedirs(dataset_dir, exist_ok=True)
+
+        for case in self.paths:
+            if case[1] == "completed":
+                casename = case[0]
+                dataset_case_dir = os.path.join(dataset_dir, os.path.basename(casename))
+
+                # Create necessary folders (mask and image)
+                os.makedirs(os.path.join(dataset_case_dir, "mask"), exist_ok=True)
+                os.makedirs(os.path.join(dataset_case_dir, "image"), exist_ok=True)
+
+                # Load images and time folders (assuming utils.load_images() is available)
+                img_files, time_folders = utils.load_images(casename)
+
+                # Total time folders for this case
+                total_time_folders = len(time_folders)
+
+                # Process mask and image files for each time folder
+                for idx, time_folder in enumerate(time_folders):
+                    time_folder_path = os.path.join(casename, time_folder)
+                    segmented_path = os.path.join(time_folder_path, "segmented")
+
+                    if not os.path.exists(segmented_path):
+                        self.update_progress(f"Segmented path does not exist: {segmented_path}", idx, total_time_folders)
+                        continue
+
+                    mask_paths = [os.path.join(segmented_path, f) for f in os.listdir(segmented_path) if os.path.isfile(os.path.join(segmented_path, f))]
+
+                    current_time_folder = os.path.join(dataset_case_dir, "mask", os.path.basename(time_folder_path))
+                    os.makedirs(current_time_folder, exist_ok=True)
+
+                    for mask_path in mask_paths:
+                        try:
+                            shutil.copyfile(mask_path, os.path.join(current_time_folder, os.path.basename(mask_path)))
+                        except Exception as e:
+                            self.update_progress(f"Failed to copy mask {mask_path}: {e}", idx, total_time_folders)
+
+                    # Process image files (Results -> Images)
+                    case_image = casename.replace("Results", "Images")
+                    if not os.path.exists(case_image):
+                        self.update_progress(f"Image folder does not exist: {case_image}", idx, total_time_folders)
+                        continue
+                    
+                    total = len(os.listdir(case_image))
+                    for idx, folder_name in enumerate(os.listdir(case_image)):
+                        prog = (idx+1)/total
+                        self.update_progress(f"Processing {os.path.join(os.path.basename(casename), folder_name)}...", prog)
+                        folder_path = os.path.join(case_image, folder_name)
+
+                        if os.path.isdir(folder_path) and folder_name.startswith("time") and folder_name[4:].isdigit():
+                            dest_time_folder = os.path.join(dataset_case_dir, "image", folder_name)
+                            os.makedirs(dest_time_folder, exist_ok=True)
+
+                            image_files = [f for f in os.listdir(folder_path) if f.endswith(valid_extensions)]
+                            for file_name in image_files:
+                                src_file_path = os.path.join(folder_path, file_name)
+                                dest_file_path = os.path.join(dest_time_folder, file_name)
+
+                                try:
+                                    shutil.copyfile(src_file_path, dest_file_path)
+                                except Exception as e:
+                                    self.update_progress(f"Failed to copy image {file_name}: {e}", idx, total_time_folders)
+
+                    # Update progress after each time folder is processed
+                    progress = (idx + 1) / total_time_folders
+                    self.update_progress(f"Processed {os.path.join(os.path.basename(casename), time_folder)}", progress)
+
+        self.update_progress("Transfer completed!", 1)
+
+    def update_progress(self, message, progress):
+        # Update the label with the progress message
+        self.progress_label.configure(text=message)
+        # Update the progress bar (progress is a value between 0 and 1)
+        self.progress_bar.set(progress)
+        self.transfer_window.update()  # Force the window to update its content
+
     def savecases(self):
         # print("Saving Cases")
         with open('save.txt', "r") as f:
@@ -232,7 +345,6 @@ class CaseSelector(ctk.CTkFrame):
         else:
             button.configure(fg_color=self.fg_color[1], hover_color = self.hover_color[1])
 
-    
     def loadcase(self, event, path):
         # print(self.buttons)
         pathidx = self.find_index(self.paths,path)

@@ -24,13 +24,15 @@ class App(ctk.CTk):
         self.preloadcases()
         # Make the window fullscreen on the monitor
         self.attributes('-fullscreen', True)
+        toggle = True
     
         # Optionally, you can bind the 'Esc' key to exit fullscreen
         def exit_fullscreen(event=None):
             self.attributes('-fullscreen', False)
+            self.state('zoomed')
 
         self.bind("<Escape>", exit_fullscreen)
-        
+
         self.original_width = self.winfo_width()
         self.original_height = self.winfo_height()
 
@@ -46,11 +48,17 @@ class App(ctk.CTk):
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
+        # self.inforow = ctk.CTkFrame(self, fg_color=self.cget("fg_color"),border_width=0)
+        # self.inforow.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        # self.inforow.grid_rowconfigure(0, weight=1)
+        # self.inforow.grid_columnconfigure(0, weight=1)
+
         self.bottomrow = ctk.CTkFrame(self, fg_color=self.cget("fg_color"),border_width=0)
-        self.bottomrow.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        self.bottomrow.grid(row=2, column=0, columnspan=2, sticky="nsew")
         self.bottomrow.grid_rowconfigure(0, weight=1)
         self.bottomrow.grid_columnconfigure(1, weight=1)
         self.bottomrow.grid_columnconfigure(0, weight=1)
@@ -90,6 +98,7 @@ class App(ctk.CTk):
         caseselectorminsize = self.current_width *(6/7)
 
         self.grid_rowconfigure(0,minsize=toprowminsize)
+        # self.grid_rowconfigure(1, minsize=(1-toprowminsize)*(1/2))
         self.bottomrow.grid_columnconfigure(0, minsize=caseselectorminsize)
 
     def on_key_press(self, event):
