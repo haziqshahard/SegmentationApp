@@ -386,8 +386,6 @@ class PolygonDrawer(ctk.CTkFrame):
                         self.points[i] = (ogold_x + dx/self.scale_factor, ogold_y + dy/self.scale_factor) 
                         self.scaledpoints[i] = (self.points[i][0]*self.scale_factor,self.points[i][1]*self.scale_factor)
 
-                        # ogold_x, ogold_y = self.points[i]
-                        # self.points[i] = (ogold_x + dx/self.scale_factor, ogold_y + dy/self.scale_factor)
                     self.drawptbtwline = False                     
             else:
                 self.is_dragging = False
@@ -522,6 +520,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
 
     def add_point(self,event,type="myocardium"):
+        print("Adding Point")
         x,y = event.x, event.y #Collect coords of event based on the current scale
         # if type == "myocardium":
         self.points.append((x/self.scale_factor, y/self.scale_factor)) #Coords of events based on the original scale
@@ -544,15 +543,12 @@ class PolygonDrawer(ctk.CTkFrame):
         line_index = self.lines.index(line)
         
         # print(f"{line_index}/{len(self.lines)}")
-        start_point_index = line_index
         end_point_index = (line_index + 1) % len(self.points)
         if end_point_index == 0:
             end_point_index = len(self.points)
-
                
         self.scaledpoints.insert(end_point_index, (new_x, new_y))
         self.points.insert(end_point_index, (new_x/self.scale_factor,new_y/self.scale_factor))
-        pointtags = [self.currentdottags[end_point_index-1],self.currentdottags[end_point_index] ]
         # Remove the old line since it will be replaced by two new lines
         self.canvas.delete(line)
         self.lines.pop(line_index)
@@ -579,8 +575,6 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.tag_bind(line2, "<Leave>", lambda e, l=line2: self.on_line_hover_leave(e, l))
         
         # Draw the new dot at the clicked position
-        if all("cavity" in tag for tag in pointtags):
-            type = "cavity"
         dot = self.draw_point(new_x, new_y,type=type)
         self.dots.insert(end_point_index, dot)
         self.currentdottags.insert(end_point_index, self.canvas.gettags(dot))

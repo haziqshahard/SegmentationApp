@@ -12,6 +12,8 @@ class CaseSelector(ctk.CTkFrame):
     """Window that enables the user to select cases by opening the folders
     Window then saves the file path and displays it.
     Goes into save.txt with all the case files so that when it is next opened, can just be clicked and it will appear
+
+    #Needs to have a check to see if the selected folder is valid and has the required folders/files within, if not, reject the folder
     """
     def __init__(self, window, debug=False, row=1, column=0, theme="blue",darklight="dark"):
         super().__init__(window)
