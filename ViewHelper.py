@@ -278,16 +278,28 @@ class ViewHelper(ctk.CTkFrame):
     def switchimgreslts(self):
         base_path = os.path.dirname(self.base_path)
         last_folder_name = os.path.basename(os.path.normpath(base_path))
-        if last_folder_name == "Results":
-            base_path = os.path.join(os.path.dirname(base_path), "Images",os.path.basename(os.path.normpath(self.base_path)))
-        if last_folder_name == "Images":
-            base_path = os.path.join(os.path.dirname(base_path), "Results",os.path.basename(os.path.normpath(self.base_path)))
+        # Define folder switches using a dictionary for easier mapping
+        folder_switch = {
+            "Results": "Images",
+            "Images": "Results"
+        }
+        
+        if last_folder_name in folder_switch:
+            # Construct the new base path
+            base_path = os.path.join(
+                self.base_path.replace(last_folder_name, folder_switch[last_folder_name]), # Parent directory
+            ) 
+            # Check if the new path exists
+            if not os.path.exists(base_path):
+                CTkMessagebox(master=self.window, message=f"Error Switching Image, path {base_path} does not exist\n")
+                # Fallback to the original base path
+                base_path = os.path.dirname(self.base_path)
         
         base_path = base_path.replace("/", "\\")
         # print(base_path)
 
         if os.path.exists(base_path):
-            # print("Switching base path")
+            #THE PATH DOES EXIST, WHICH IS WHY IT IS RELEASING AN ERROR, NEED TO ERROR CHECK!!!!
             self.base_path = base_path
             self.slice_files, self.time_folders = utils.load_images(self.base_path)
             self.slice_index = 0

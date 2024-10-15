@@ -48,7 +48,6 @@ class App(ctk.CTk):
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
-        self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
@@ -58,7 +57,7 @@ class App(ctk.CTk):
         # self.inforow.grid_columnconfigure(0, weight=1)
 
         self.bottomrow = ctk.CTkFrame(self, fg_color=self.cget("fg_color"),border_width=0)
-        self.bottomrow.grid(row=2, column=0, columnspan=2, sticky="nsew")
+        self.bottomrow.grid(row=1, column=0, columnspan=2, sticky="nsew")
         self.bottomrow.grid_rowconfigure(0, weight=1)
         self.bottomrow.grid_columnconfigure(1, weight=1)
         self.bottomrow.grid_columnconfigure(0, weight=1)
