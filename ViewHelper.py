@@ -24,11 +24,6 @@ class ViewHelper(ctk.CTkFrame):
     shouldn't need constant toggling in order to show the thing
 
     #
-    Switch the viewhelper to look at the images rather than the results when you can 
-    Sync the viewhelper to the segmentor:
-        When hitting a or d, change viewhelper to whatever is on segmentor
-        If hitting arrows, just change the viewhelper
-    Line size needs to match the segmentor
     """
     def __init__(self, window, debug=False, row=1, column=0,darklight="dark"):
         super().__init__(window)
@@ -152,7 +147,7 @@ class ViewHelper(ctk.CTkFrame):
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
         self.context_menu.add_command(label="Toggle Drawn Polygon", command=self.toggle_polygon)
         self.context_menu.add_command(label="Invert All Folder Masks", command=self.invert_masks)
-        self.context_menu.add_command(label="Switch to Images/Results", command=self.switchimgreslts)
+        # self.context_menu.add_command(label="Switch to Images/Results", command=self.switchimgreslts)
 
         self.bind_keys()
         self.window.focus_set()
