@@ -108,7 +108,11 @@ class MaskViewer(ctk.CTkFrame):
         new_width = int(self.original_width * self.scale_factor)
         new_height = int(self.original_height * self.scale_factor)
 
-        #Updating canvas with the current scaled image
+        if new_width == 0 :
+            new_width = 1
+        if new_height == 0:
+            new_height = 1 
+
         scaled_image = self.img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         self.scaled_photo = ImageTk.PhotoImage(scaled_image)
         #Update canvas and the image size
@@ -125,6 +129,10 @@ class MaskViewer(ctk.CTkFrame):
             self.slice_index = (self.slice_index - 1) % len(self.slice_files[self.time_index])
         elif event.keysym == "Right":
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
+
+        if self.debug == False and (event.keysym == "A" or event.keysym == "a" or event.keysym == "D" or event.keysym == "d"):
+            self.slice_index = self.window.master.segmentor.slice_index
+            self.time_index = self.window.master.segmentor.time_index
 
         self.updateimage(self.slice_index, self.time_index)
         self.mask_path = os.path.join(self.base_path, self.time_folders[self.time_index], "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")

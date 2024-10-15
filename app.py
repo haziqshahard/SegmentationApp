@@ -41,6 +41,8 @@ class App(ctk.CTk):
         # print(self.time_folders)
 
         self.current_slice = 1
+        self.line_width = 1
+        self.polygoncolor = None
         self.current_time = int(self.slice_files[0][0][12:15])
         self.time_index = self.time_folders.index(f"time{self.current_time:03d}")
         self.slice_index = self.slice_files[self.time_index].index(f"slice{self.current_slice:03d}time{self.current_time:03d}.png")

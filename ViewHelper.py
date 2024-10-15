@@ -243,10 +243,10 @@ class ViewHelper(ctk.CTkFrame):
             self.time_index = self.window.segmentor.time_index
 
         self.updateimage(self.slice_index, self.time_index)
-        if self.debug == False:
-            self.window.maskviewer.slice_index = self.slice_index
-            self.window.maskviewer.time_index = self.time_index
-            self.window.maskviewer.loadimg()
+        # if self.debug == False and (event.keysym == "A" or event.keysym == "a" or event.keysym == "D" or event.keysym == "d"):
+        #     self.window.maskviewer.slice_index = self.slice_index
+        #     self.window.maskviewer.time_index = self.time_index
+        #     self.window.maskviewer.loadimg()
 
         time_folder = self.time_folders[self.time_index]
         
@@ -373,6 +373,8 @@ class ViewHelper(ctk.CTkFrame):
         self.render_polygon()
     
     def render_polygon(self):
+        polygoncolor = self.polygoncolor if self.debug == True else self.window.segmentor.polygoncolor
+        linewidth = self.line_width*self.scale_factor if self.debug == True else self.window.segmentor.line_width*self.scale_factor
         if self.show_polygon:
             # print(f"Current time:{self.time_index}, Current Slice:{self.slice_index}")
             self.delete_polygon()
@@ -384,21 +386,21 @@ class ViewHelper(ctk.CTkFrame):
                  # Draw lines between points
                 if len(self.scaledpoints) > 1:
                     if len(self.scaledpoints) > 2:
-                        self.polygon = utils.PILdrawpoly(self.currentdottags, self.scaledpoints, [self.current_width, self.current_height], self.polygoncolor)
+                        self.polygon = utils.PILdrawpoly(self.currentdottags, self.scaledpoints, [self.current_width, self.current_height], polygoncolor)
                         self.polytag = self.canvas.create_image(0, 0, image=self.polygon, anchor=tk.NW)
                         lowest_item_id = self.canvas.find_all()[1]
                         self.canvas.tag_lower(self.polytag, lowest_item_id)
                     for i in range(len(self.scaledpoints) - 1):
                         if "cavity" in self.currentdottags[i] and "cavity" in self.currentdottags[i+1]:
-                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=utils.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
+                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=utils.hextocomp(self.linecolor), tags=("line","cavity"), width = linewidth)
                         else:
-                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
+                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.linecolor, tags="line", width = linewidth)               
                         self.lines.append(line)
                     if len(self.points) > 2 and self.points[0] != self.points[-1]:
                         if "cavity" in self.currentdottags[-1] and "cavity" in self.currentdottags[0]:
-                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=utils.hextocomp(self.linecolor), tags=("line","cavity"), width = self.line_width*self.scale_factor)
+                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=utils.hextocomp(self.linecolor), tags=("line","cavity"), width = linewidth)
                         else:
-                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = self.line_width*self.scale_factor)               
+                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = linewidth)               
                         self.lines.append(line)
             
         else:
