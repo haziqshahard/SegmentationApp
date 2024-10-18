@@ -6,8 +6,9 @@ import ast
 import webbrowser
 import utils
 import shutil
-import re
 import threading
+from PIL import Image
+import numpy as np
 class CaseSelector(ctk.CTkFrame):
     """Window that enables the user to select cases by opening the folders
     Window then saves the file path and displays it.
@@ -100,18 +101,23 @@ class CaseSelector(ctk.CTkFrame):
             #Whatever the app's base path is, check the 
 
     def selectcase(self):
-        self.base_path = tk.filedialog.askdirectory(title="Select the Case")
-        if any(self.base_path in sublist for sublist in self.paths):
+        base_path = tk.filedialog.askdirectory(title="Select the Case")
+        if any(base_path in sublist for sublist in self.paths):
             CTkMessagebox(message="This Case is already present", icon="cancel")
         else:
-            if os.path.exists(self.base_path):
-                self.paths += [[str(self.base_path),"notcompleted"]]
-                self.createbutton(self.base_path)
+            check1, check2 = utils.load_images(base_path)
+            if os.path.exists(base_path) and (len(check1)!=0 and len(check2) != 0):
+                self.base_path = base_path
+                self.paths += [[str(base_path),"notcompleted"]]
+                self.createbutton(base_path)
                 self.renderbuttons()
                 self.savecases()
+            elif base_path == "":
+                return
             else:
-                self.selectcase()
-        return
+                CTkMessagebox(message="This file path is not valid.", icon="cancel")
+                return
+        
     
     def open_transfer_window(self):
         msg = CTkMessagebox(master=self.window, title="Create Dataset", message=f"Do you want to create a dataset from all the completed cases?",
@@ -141,78 +147,73 @@ class CaseSelector(ctk.CTkFrame):
 
     def create_dataset(self):
         dir = tk.filedialog.askdirectory(title="Select the Folder to Create the dataset within")
-        valid_extensions = (".png", ".jpg", ".jpeg")
         dataset_dir = os.path.join(dir, "dataset")
-
         # Ensure the dataset directory exists
         os.makedirs(dataset_dir, exist_ok=True)
-
         for case in self.paths:
             if case[1] == "completed":
-                casename = case[0]
-                dataset_case_dir = os.path.join(dataset_dir, os.path.basename(casename))
+                dataset_case_dir = os.path.join(dataset_dir, os.path.basename(case[0]))
 
                 # Create necessary folders (mask and image)
                 os.makedirs(os.path.join(dataset_case_dir, "mask"), exist_ok=True)
                 os.makedirs(os.path.join(dataset_case_dir, "image"), exist_ok=True)
 
-                # Load images and time folders (assuming utils.load_images() is available)
-                img_files, time_folders = utils.load_images(casename)
+                _, time_folders = utils.load_images(case[0])
+                
+                self.process_mask__image(time_folders = time_folders, casename = case[0], dataset_case_dir=dataset_case_dir) #Transfers all the images and masks to the dataset folder
+                ES, ED = self.determine_ES_ED(time_folders, case[0]) #Determines which of the masks are ES/ED based on the mask area
+                self.write_info(dataset_case_dir, case[0], ES, ED) #Writes all the necessary info to the dataset/info.txt file
 
-                # Total time folders for this case
-                total_time_folders = len(time_folders)
-
-                # Process mask and image files for each time folder
-                for idx, time_folder in enumerate(time_folders):
-                    time_folder_path = os.path.join(casename, time_folder)
-                    segmented_path = os.path.join(time_folder_path, "segmented")
-
-                    if not os.path.exists(segmented_path):
-                        self.update_progress(f"Segmented path does not exist: {segmented_path}", idx, total_time_folders)
-                        continue
-
-                    mask_paths = [os.path.join(segmented_path, f) for f in os.listdir(segmented_path) if os.path.isfile(os.path.join(segmented_path, f))]
-
-                    current_time_folder = os.path.join(dataset_case_dir, "mask", os.path.basename(time_folder_path))
-                    os.makedirs(current_time_folder, exist_ok=True)
-
-                    for mask_path in mask_paths:
-                        try:
-                            shutil.copyfile(mask_path, os.path.join(current_time_folder, os.path.basename(mask_path)))
-                        except Exception as e:
-                            self.update_progress(f"Failed to copy mask {mask_path}: {e}", idx, total_time_folders)
-
-                    # Process image files (Results -> Images)
-                    case_image = casename.replace("Results", "Images")
-                    if not os.path.exists(case_image):
-                        self.update_progress(f"Image folder does not exist: {case_image}", idx, total_time_folders)
-                        continue
-                    
-                    total = len(os.listdir(case_image))
-                    for idx, folder_name in enumerate(os.listdir(case_image)):
-                        prog = (idx+1)/total
-                        self.update_progress(f"Processing {os.path.join(os.path.basename(casename), folder_name)}...", prog)
-                        folder_path = os.path.join(case_image, folder_name)
-
-                        if os.path.isdir(folder_path) and folder_name.startswith("time") and folder_name[4:].isdigit():
-                            dest_time_folder = os.path.join(dataset_case_dir, "image", folder_name)
-                            os.makedirs(dest_time_folder, exist_ok=True)
-
-                            image_files = [f for f in os.listdir(folder_path) if f.endswith(valid_extensions)]
-                            for file_name in image_files:
-                                src_file_path = os.path.join(folder_path, file_name)
-                                dest_file_path = os.path.join(dest_time_folder, file_name)
-
-                                try:
-                                    shutil.copyfile(src_file_path, dest_file_path)
-                                except Exception as e:
-                                    self.update_progress(f"Failed to copy image {file_name}: {e}", idx, total_time_folders)
-
-                    # Update progress after each time folder is processed
-                    progress = (idx + 1) / total_time_folders
-                    self.update_progress(f"Processed {os.path.join(os.path.basename(casename), time_folder)}", progress)
+                #Need to make a check folder with overlaid masks on top of the intensities for only the mask timepoints
 
         self.update_progress("Transfer completed!", 1)
+
+    def write_info(self, dataset_case_dir, case, ES, ED):
+        try:
+            with open(f"{os.path.join(case.replace("Results", "Images"), "scale.txt")}", mode="r") as scaletxt:
+                # Perform operations with scaletxt
+                scale = scaletxt.read()  # Example read operation
+        except FileNotFoundError:
+            raise FileNotFoundError(f"The file at path {f"{os.path.join(case.replace("Results", "Images"), "scale.txt")}"} was not found.")
+        
+        all_items = os.listdir(case.replace("Results", "Images"))
+        nbframe = len([item for item in all_items if item.startswith("time")])
+
+        with open(f"{dataset_case_dir}/info.txt", mode="w") as txt:
+            txt.write(f"ES:{ES}\n")
+            txt.write(f"ED:{ED}\n")
+            txt.write(f"NbFrame:{nbframe}\n")
+            txt.write(f"Spacing: {scale if len(scale) != 0 else "Scale not available"}")
+
+    def compare_masks(self, time_folders, casepath):
+
+        mask1path = os.path.join(casepath, time_folders[0], "segmented","Segmented Slice001.png")
+        mask2path = os.path.join(casepath, time_folders[1], "segmented","Segmented Slice001.png")
+        if os.path.exists(mask1path) and os.path.exists(mask2path):
+            time_str = [part for part in mask1path.split(os.sep) if 'time' in part][0]
+            # Extract the numeric part of 'time'
+            time_value = time_str.replace('time', '')
+            mask1time = int(time_value)
+
+            time_str = [part for part in mask2path.split(os.sep) if 'time' in part][0]
+            # Extract the numeric part of 'time'
+            time_value = time_str.replace('time', '')
+            mask2time = int(time_value)
+
+            mask1 = Image.open(mask1path).convert('L')
+            mask1 = np.array(mask1)
+            mask1[mask1>0] == 1
+
+            mask2 = Image.open(mask2path).convert('L')
+            mask2 = np.array(mask2)
+            mask2[mask2>0] == 1
+
+            ES, ED = (mask1time, mask2time) if np.sum(mask1) > np.sum(mask2) else (mask2time, mask1time)
+        else:
+            ES = "Error"
+            ED = "Error"
+
+        return ES, ED
 
     def update_progress(self, message, progress):
         # Update the label with the progress message
@@ -220,6 +221,58 @@ class CaseSelector(ctk.CTkFrame):
         # Update the progress bar (progress is a value between 0 and 1)
         self.progress_bar.set(progress)
         self.transfer_window.update()  # Force the window to update its content
+
+    def process_mask__image(self, time_folders, casename, dataset_case_dir):
+        valid_extensions = (".png", ".jpg", ".jpeg")
+        total_time_folders = len(time_folders)
+        # Process mask and image files for each time folder
+        for idx, time_folder in enumerate(time_folders):
+            time_folder_path = os.path.join(casename, time_folder)
+            segmented_path = os.path.join(time_folder_path, "segmented")
+
+            if not os.path.exists(segmented_path):
+                self.update_progress(f"Segmented path does not exist: {segmented_path}", idx, total_time_folders)
+                continue
+
+            mask_paths = [os.path.join(segmented_path, f) for f in os.listdir(segmented_path) if os.path.isfile(os.path.join(segmented_path, f))]
+
+            current_time_folder = os.path.join(dataset_case_dir, "mask", os.path.basename(time_folder_path))
+            os.makedirs(current_time_folder, exist_ok=True)
+
+            for mask_path in mask_paths:
+                try:
+                    shutil.copyfile(mask_path, os.path.join(current_time_folder, os.path.basename(mask_path)))
+                except Exception as e:
+                    self.update_progress(f"Failed to copy mask {mask_path}: {e}", idx, total_time_folders)
+
+            # Process image files (Results -> Images)
+            case_image = casename.replace("Results", "Images")
+            if not os.path.exists(case_image):
+                self.update_progress(f"Image folder does not exist: {case_image}", idx, total_time_folders)
+                break
+            
+            total = len(os.listdir(case_image))
+            for idx, folder_name in enumerate(os.listdir(case_image)):
+                prog = (idx+1)/total
+                self.update_progress(f"Processing {os.path.join(os.path.basename(casename), folder_name)}...", prog)
+                folder_path = os.path.join(case_image, folder_name)
+
+                if os.path.isdir(folder_path) and folder_name.startswith("time") and folder_name[4:].isdigit():
+                    dest_time_folder = os.path.join(dataset_case_dir, "image", folder_name)
+                    os.makedirs(dest_time_folder, exist_ok=True)
+
+                    image_files = [f for f in os.listdir(folder_path) if f.endswith(valid_extensions)]
+                    for file_name in image_files:
+                        src_file_path = os.path.join(folder_path, file_name)
+                        dest_file_path = os.path.join(dest_time_folder, file_name)
+
+                        try:
+                            shutil.copyfile(src_file_path, dest_file_path)
+                        except Exception as e:
+                            self.update_progress(f"Failed to copy image {file_name}: {e}", idx, total_time_folders)
+                    
+                    progress = (idx + 1) / total_time_folders
+                    self.update_progress(f"Processed {os.path.join(os.path.basename(casename), time_folder)}", progress)
 
     def savecases(self):
         # print("Saving Cases")

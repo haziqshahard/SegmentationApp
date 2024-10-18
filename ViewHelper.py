@@ -116,32 +116,34 @@ class ViewHelper(ctk.CTkFrame):
         self.labelinfo.grid(row=0,column=0, padx=10, sticky="")
 
         #---------MOVEMENT INFO BOX---------
-        self.moveinfo = ctk.CTkFrame(master=self.root)
-        self.moveinfo.grid(row=1, column=0, padx=(10,10), pady=7,sticky="e")
+        self.moveinfo = ctk.CTkFrame(master=self.root, width = 10)
+        self.moveinfo.grid(row=1, column=0, padx=(10,10), pady=5, sticky="e")
         self.moveinfo.rowconfigure(0, weight=0)
         self.moveinfo.rowconfigure(1, weight=0)
         self.labelfontsize = 15
-
         padx=4
+        pady=0
+
         upbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-        upbox.grid(row=0,column=1, padx=padx, pady=0, sticky="nsew")
-        uplabel = ctk.CTkLabel(master=upbox, text=f"△", font=(self.font, self.labelfontsize,'bold'), anchor='center', justify='center')
-        uplabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+        upbox.grid(row=0,column=1, padx=padx, pady=0, sticky="ns")
+        upbutton = ctk.CTkButton(master=upbox, text=f"△", font=(self.font, self.labelfontsize,'bold'), command=lambda:self.simulate_key("Up"), fg_color=upbox.cget("fg_color"), width=20, height=25)
+        upbutton.grid(row=0,column=0, padx=7, pady=(1,1), sticky="ns")
         
         downbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-        downbox.grid(row=1,column=1, padx=padx, pady=0, sticky="nsew")
-        downlabel = ctk.CTkLabel(master=downbox, text=f"▽", font=(self.font, self.labelfontsize,'bold'), anchor='center', justify='center')
-        downlabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+        downbox.grid(row=1,column=1, padx=padx, pady=pady, sticky="ns")
+        downbox.grid_rowconfigure(0, weight=1)
+        downbutton = ctk.CTkButton(master=downbox, text=f"▽", font=(self.font, self.labelfontsize,'bold'), command=lambda:self.simulate_key("Down"), fg_color=upbox.cget("fg_color"), width=20, height=25)
+        downbutton.grid(row=0,column=0, padx=7, pady=(5,1), sticky="ns")
         
         leftbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-        leftbox.grid(row=1,column=0, padx=(padx,0), pady=0, sticky="nsew")
-        leftlabel = ctk.CTkLabel(master=leftbox, text=f"◁", font=(self.font, self.labelfontsize+10,'bold'), anchor='center', justify='center')
-        leftlabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+        leftbox.grid(row=1,column=0, padx=(padx,0), pady=pady, sticky="ns")
+        leftbutton = ctk.CTkButton(master=leftbox, text=f"◁", font=(self.font, self.labelfontsize+10,'bold'),command=lambda:self.simulate_key("Left"), fg_color=upbox.cget("fg_color"), width=20, height=25)
+        leftbutton.grid(row=0,column=0, padx=7, pady=(5,5), sticky="ns")
 
         rightbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-        rightbox.grid(row=1,column=2, padx=(0,padx), pady=0, sticky="nsew")
-        rightlabel = ctk.CTkLabel(master=rightbox, text=f"▷", font=(self.font, self.labelfontsize+10,'bold'), anchor='center', justify='center')
-        rightlabel.grid(row=1,column=2, padx=7, pady=(1,1), sticky="nsew")
+        rightbox.grid(row=1,column=2, padx=(0,padx), pady=pady, sticky="ns")
+        rightbutton = ctk.CTkButton(master=rightbox, text=f"▷", font=(self.font, self.labelfontsize+10,'bold'), command=lambda:self.simulate_key("Right"), fg_color=upbox.cget("fg_color"), width=20, height=25)
+        rightbutton.grid(row=1,column=2, padx=7, pady=(5,5), sticky="ns")
 
         #---------Context Menu---------
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
@@ -218,6 +220,16 @@ class ViewHelper(ctk.CTkFrame):
         self.line_width = self.line_width*self.item_scale_factor
         self.delete_polygon()
         self.render_polygon()
+
+    def simulate_key(self, key):
+        """Simulate a key press by creating a mock event."""
+        class MockEvent:
+            def __init__(self, keysym):
+                self.keysym = keysym
+        
+        # Simulate the key press by calling on_key_press with a mock event
+        mock_event = MockEvent(key)
+        self.on_key_press(mock_event)
 
     def on_key_press(self, event):
         """Handle key press events."""

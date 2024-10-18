@@ -11,7 +11,6 @@ from MaskViewer import *
 
 class App(ctk.CTk):
     """
-    Increase size of cursor when holding c down
     """
     def __init__(self):
         super().__init__()
@@ -98,6 +97,8 @@ class App(ctk.CTk):
         toprowminsize = self.current_height * (3/4)
         caseselectorminsize = self.current_width *(6/7)
 
+        self.grid_columnconfigure(0, minsize = self.current_width * (1/2))
+        self.grid_columnconfigure(1, minsize = self.current_width * (1/2))
         self.grid_rowconfigure(0,minsize=toprowminsize)
         # self.grid_rowconfigure(1, minsize=(1-toprowminsize)*(1/2))
         self.bottomrow.grid_columnconfigure(0, minsize=caseselectorminsize)
@@ -123,17 +124,22 @@ class App(ctk.CTk):
 
             elif self.settings.get('paths') == None:
                 #Force the user to select a case 
-                self.base_path = filedialog.askdirectory(title="Select the base folder")
-                while self.base_path == '':
-                    self.base_path= filedialog.askdirectory(title="Please select an initial case")
+                check1, check2 = utils.load_images(self.base_path)
+                while len(check1) == 0 or len(check2)==0:
+                    self.base_path = filedialog.askdirectory(title="Please select an initial case")
+                    while self.base_path == '':
+                        self.base_path= filedialog.askdirectory(title="Please select an initial case")
+                
             
         else:
             with open('save.txt', 'w') as file:
                 pass
             #Force the user to select an initial case 
-            self.base_path = filedialog.askdirectory(title="Please select an initial case")
-            while self.base_path == '':
-                self.base_path= filedialog.askdirectory(title="Please select an initial case")
+            check1, check2 = utils.load_images(self.base_path)
+            while len(check1) == 0 or len(check2)==0:
+                self.base_path = filedialog.askdirectory(title="Please select an initial case")
+                while self.base_path == '':
+                    self.base_path= filedialog.askdirectory(title="Please select an initial case")
 
     def load_image(self, slice_index = 0, time_index=0):
         """Load and display the image based on current slice and time index."""

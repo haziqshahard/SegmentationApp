@@ -122,6 +122,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.info = ctk.CTkFrame(master=self.root,fg_color="transparent", border_width=0)
         self.info.grid(row=1, column=2, padx=5, pady=(10,10),sticky="nse")
         self.info.grid_columnconfigure(0, weight=1)
+        self.info.grid_columnconfigure(1, weight=1)
         self.info.grid_rowconfigure(0, weight=1)
 
         #Info box for current slice/time
@@ -135,13 +136,15 @@ class PolygonDrawer(ctk.CTkFrame):
 
         #Info box for file movements
         self.moveinfo = ctk.CTkFrame(master=self.info,fg_color=self.currentmodedialog.cget('fg_color'))
-        self.moveinfo.grid(row=0, column=1, padx=(0,5), pady=0,sticky="ns")
+        self.moveinfo.grid(row=0, column=1, padx=(0,5), pady=0 ,sticky="ns")
         self.moveinfo.grid_rowconfigure(0, weight=1)
-        self.alabel = ctk.CTkLabel(master=self.moveinfo, text=f"A\nPrev. Slice", font=(self.font, self.fontsize-7), anchor='center', justify='center')
-        self.alabel.grid(row=0,column=0, padx=5, pady=(0,5), sticky="nsew")
-        self.dlabel = ctk.CTkLabel(master=self.moveinfo, text=f"D\nNext Slice", font=(self.font, self.fontsize-7), anchor='center', justify='center')
-        self.dlabel.grid(row=0,column=1, padx=5, pady=(0,5), sticky="nsew")
-        
+
+        abutton = ctk.CTkButton(master=self.moveinfo, text=f"A\nPrevious Slice", font=(self.font, self.fontsize-7), fg_color=self.filelabel.cget("fg_color"), command=lambda:self.simulate_key("a"))
+        abutton.grid(row=0,column=0, padx=5, pady=(5,5), sticky="ns")
+
+        dbutton = ctk.CTkButton(master=self.moveinfo, text=f"D\nNext Slice", font=(self.font, self.fontsize-7), fg_color=self.filelabel.cget("fg_color"), command=lambda:self.simulate_key("d"))
+        dbutton.grid(row=0,column=1, padx=5, pady=(5,5), sticky="ns")
+
         #Display image on canvas
         self.canvimg=self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items
 
@@ -399,20 +402,31 @@ class PolygonDrawer(ctk.CTkFrame):
         else:
             self.show_context_menu(event)
 
+    def simulate_key(self, key):
+        """Simulate a key press by creating a mock event."""
+        class MockEvent:
+            def __init__(self, keysym):
+                self.keysym = keysym
+        
+        # Simulate the key press by calling on_key_press with a mock event
+        mock_event = MockEvent(key)
+        self.on_key_press(mock_event)
+
     def on_key_press(self,event):
         self.updateswitchpoints()
         # print(f"Key pressed: {event.keysym}")  # Debugging line
+        def updateimg():
+            self.checkswitchpoints()
+            self.updateimage(self.slice_index, self.time_index)
 
         if event.keysym == "a" or event.keysym =="A":
             self.slice_index = (self.slice_index - 1) % len(self.slice_files[self.time_index])
+            updateimg()
             # print("A Clicked")
         if event.keysym == "d" or event.keysym =="D":
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
-            # print("D Clicked")
+            updateimg()
 
-        # self.delete_polygon()
-        self.checkswitchpoints()
-        self.updateimage(self.slice_index, self.time_index)
 
     def switchplacecavity(self,event):
         clicked_items = self.canvas.find_withtag("current")
@@ -520,7 +534,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
 
     def add_point(self,event,type="myocardium"):
-        print("Adding Point")
+        # print("Adding Point")
         x,y = event.x, event.y #Collect coords of event based on the current scale
         # if type == "myocardium":
         self.points.append((x/self.scale_factor, y/self.scale_factor)) #Coords of events based on the original scale
