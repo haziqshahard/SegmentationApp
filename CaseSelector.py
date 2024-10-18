@@ -15,6 +15,8 @@ class CaseSelector(ctk.CTkFrame):
     Goes into save.txt with all the case files so that when it is next opened, can just be clicked and it will appear
 
     #Needs to have a check to see if the selected folder is valid and has the required folders/files within, if not, reject the folder
+    #Make a "Create Results Folder" button
+    #
     """
     def __init__(self, window, debug=False, row=1, column=0, theme="blue",darklight="dark"):
         super().__init__(window)
@@ -150,7 +152,8 @@ class CaseSelector(ctk.CTkFrame):
         dataset_dir = os.path.join(dir, "dataset")
         # Ensure the dataset directory exists
         os.makedirs(dataset_dir, exist_ok=True)
-        for case in self.paths:
+
+        for case in self.paths[-1]:
             if case[1] == "completed":
                 dataset_case_dir = os.path.join(dataset_dir, os.path.basename(case[0]))
 
@@ -185,8 +188,7 @@ class CaseSelector(ctk.CTkFrame):
             txt.write(f"NbFrame:{nbframe}\n")
             txt.write(f"Spacing: {scale if len(scale) != 0 else "Scale not available"}")
 
-    def compare_masks(self, time_folders, casepath):
-
+    def determine_ES_ED(self, time_folders, casepath):
         mask1path = os.path.join(casepath, time_folders[0], "segmented","Segmented Slice001.png")
         mask2path = os.path.join(casepath, time_folders[1], "segmented","Segmented Slice001.png")
         if os.path.exists(mask1path) and os.path.exists(mask2path):
@@ -231,7 +233,7 @@ class CaseSelector(ctk.CTkFrame):
             segmented_path = os.path.join(time_folder_path, "segmented")
 
             if not os.path.exists(segmented_path):
-                self.update_progress(f"Segmented path does not exist: {segmented_path}", idx, total_time_folders)
+                self.update_progress(f"Segmented path does not exist: {segmented_path}", (idx+1)/ total_time_folders)
                 continue
 
             mask_paths = [os.path.join(segmented_path, f) for f in os.listdir(segmented_path) if os.path.isfile(os.path.join(segmented_path, f))]
@@ -243,12 +245,12 @@ class CaseSelector(ctk.CTkFrame):
                 try:
                     shutil.copyfile(mask_path, os.path.join(current_time_folder, os.path.basename(mask_path)))
                 except Exception as e:
-                    self.update_progress(f"Failed to copy mask {mask_path}: {e}", idx, total_time_folders)
+                    self.update_progress(f"Failed to copy mask {mask_path}: {e}", (idx+1)/ total_time_folders)
 
             # Process image files (Results -> Images)
             case_image = casename.replace("Results", "Images")
             if not os.path.exists(case_image):
-                self.update_progress(f"Image folder does not exist: {case_image}", idx, total_time_folders)
+                self.update_progress(f"Image folder does not exist: {case_image}", (idx+1)/ total_time_folders)
                 break
             
             total = len(os.listdir(case_image))
