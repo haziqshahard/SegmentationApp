@@ -13,6 +13,7 @@ from CTkMessagebox import CTkMessagebox
 import ast
 import cv2
 import utils
+import platform
 
 class PolygonDrawer(ctk.CTkFrame):
     """
@@ -223,6 +224,8 @@ class PolygonDrawer(ctk.CTkFrame):
         if self.polygoncolor == None:
             self.polygoncolor = (0,0,255,int(0.1*255))
 
+        self.bind_mouse_events()
+
     def selecttime(self):
         def submit_action():
             try:
@@ -402,6 +405,13 @@ class PolygonDrawer(ctk.CTkFrame):
         else:
             self.show_context_menu(event)
 
+    def bind_mouse_events(self):
+        self.canvas.bind("<Button-1>", self.on_mouse_down)
+        if platform.system() == "Darwin":  # macOS
+            self.canvas.bind("<Button-2>", self.handle_right_click)  # macOS
+        else:
+            self.canvas.bind("<Button-3>", self.handle_right_click)  # Windows/Linux
+            
     def simulate_key(self, key):
         """Simulate a key press by creating a mock event."""
         class MockEvent:

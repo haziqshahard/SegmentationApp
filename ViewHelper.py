@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from CTkMessagebox import CTkMessagebox
 import ast
 import utils
+import platform
 
 class ViewHelper(ctk.CTkFrame):
     """
@@ -22,7 +23,6 @@ class ViewHelper(ctk.CTkFrame):
     ISSUES:
     render_polygon has to show the polygon if it exists, and not show it if it doesnt
     shouldn't need constant toggling in order to show the thing
-
     #
     """
     def __init__(self, window, debug=False, row=1, column=0,darklight="dark"):
@@ -181,7 +181,10 @@ class ViewHelper(ctk.CTkFrame):
             self.window.bind("<Up>", self.on_key_press)
             self.window.bind("<Down>", self.on_key_press)
 
-        self.canvas.bind("<Button-3>", self.handle_right_click)
+        if platform.system() == "Darwin":  # macOS
+            self.canvas.bind("<Button-2>", self.handle_right_click)  # macOS
+        else:  # Windows 和 Linux 使用 Button-3
+            self.canvas.bind("<Button-3>", self.handle_right_click)
 
     def on_resize(self,event):
         self.root.grid_rowconfigure(0,minsize=self.root.winfo_height()*(9/10))
