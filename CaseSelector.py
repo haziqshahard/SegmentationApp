@@ -384,7 +384,7 @@ class CaseSelector(ctk.CTkFrame):
             case_path = self.paths[pathidx][0]
         else:
             case_path = case_path
-        print(case_path)
+        # print(case_path)
         if "/Results/" in case_path or dataset == True:
             all_items = os.listdir(case_path)
             times = [item for item in all_items if item.startswith("time")]
