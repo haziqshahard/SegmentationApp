@@ -9,6 +9,8 @@ import shutil
 import threading
 from PIL import Image
 import numpy as np
+import cv2
+import platform
 class CaseSelector(ctk.CTkFrame):
     """Window that enables the user to select cases by opening the folders
     Window then saves the file path and displays it.
@@ -16,7 +18,7 @@ class CaseSelector(ctk.CTkFrame):
 
     #Needs to have a check to see if the selected folder is valid and has the required folders/files within, if not, reject the folder
     #Make a "Create Results Folder" button
-    #
+    #Make a "Generate Check Folder" button with the overlay for the segmented times
     """
     def __init__(self, window, debug=False, row=1, column=0, theme="blue",darklight="dark"):
         super().__init__(window)
@@ -153,8 +155,8 @@ class CaseSelector(ctk.CTkFrame):
         # Ensure the dataset directory exists
         os.makedirs(dataset_dir, exist_ok=True)
 
-        for case in self.paths[-1]:
-            if case[1] == "completed":
+        for case in self.paths:
+            if case[1] == "completed" and "/Results/" in case[0]:
                 dataset_case_dir = os.path.join(dataset_dir, os.path.basename(case[0]))
 
                 # Create necessary folders (mask and image)
@@ -166,8 +168,11 @@ class CaseSelector(ctk.CTkFrame):
                 self.process_mask__image(time_folders = time_folders, casename = case[0], dataset_case_dir=dataset_case_dir) #Transfers all the images and masks to the dataset folder
                 ES, ED = self.determine_ES_ED(time_folders, case[0]) #Determines which of the masks are ES/ED based on the mask area
                 self.write_info(dataset_case_dir, case[0], ES, ED) #Writes all the necessary info to the dataset/info.txt file
-
-                #Need to make a check folder with overlaid masks on top of the intensities for only the mask timepoints
+                self.update_progress(f"Creating check folder in {dataset_case_dir}", 50/100)
+                try: 
+                    self.create_check(case_path=os.path.join(dataset_case_dir, "mask"), dataset=True) #Creates a check folder with overlaid masks on top of the intensities for only the mask timepoints
+                except ValueError:
+                    print(ValueError)
 
         self.update_progress("Transfer completed!", 1)
 
@@ -344,12 +349,11 @@ class CaseSelector(ctk.CTkFrame):
     def createbutton(self, path):
         # print(path)
         components = path.split("/")
-        case = os.path.join(components[-2], components[-1])
+        case = os.path.join(components[-3], components[-2], components[-1])
         btn = ctk.CTkButton(master=self.scrollframe, height=30, text=f"{case}", 
                             font=(self.font,self.fontsize),anchor="w")
         btn.bind("<Button-1>", command=lambda event, path=path: self.loadcase(event, path = path))
         btn.bind("<Button-3>", command=lambda event, path=path: self.handle_right_click(event, path = path))
-
         self.buttons.append(btn)
     
     def handle_right_click(self, event, path):
@@ -357,10 +361,70 @@ class CaseSelector(ctk.CTkFrame):
         # Create a context menu
         context_menu = tk.Menu(self.root, tearoff=0)
         context_menu.add_command(label="Delete Case", command=lambda: self.delete_button(pathidx))
+        context_menu.add_command(label="Create Check", command=lambda: self.create_check(pathidx))
+        context_menu.add_command(label ="Create Results Folder", command=lambda: self.create_results(pathidx))
         context_menu.add_command(label="Mark Completed",command = lambda: self.switchcompleted(pathidx))
-        context_menu.add_command(label="Open Folder",command = lambda: os.startfile(path))
+        if platform.system() == "Windows":
+            context_menu.add_command(label="Open Folder", command=lambda: os.startfile(path))
+        elif platform.system() == "Darwin":  # macOS
+            context_menu.add_command(label="Open Folder", command=lambda: os.system(f"open '{path}'"))
+        else:  # Linux
+            context_menu.add_command(label="Open Folder", command=lambda: os.system(f"xdg-open '{path}'"))
 
         context_menu.tk_popup(event.x_root, event.y_root)
+
+    def create_check(self, pathidx = 0, case_path = None, dataset=False):
+        """
+        If case_path is not instantiated, default to the path index
+        Else, use the case_path
+        Dataset can also be used when making the dataset folders
+        """
+        #Can only do it for a results folder
+        if case_path == None:
+            case_path = self.paths[pathidx][0]
+        else:
+            case_path = case_path
+        print(case_path)
+        if "/Results/" in case_path or dataset == True:
+            all_items = os.listdir(case_path)
+            times = [item for item in all_items if item.startswith("time")]
+            check_path = os.path.join(case_path, "check") if dataset == False else os.path.join(os.path.dirname(case_path), "check")
+            if not os.path.exists(check_path):
+                os.makedirs(check_path) 
+            for time in times:
+                if not os.path.exists(os.path.join(check_path, time)):
+                    os.makedirs(os.path.join(check_path, time)) 
+                slices = os.listdir(os.path.join(case_path, time, "segmented")) if dataset == False else os.listdir(os.path.join(case_path, time)) #Mask Slices
+                allintimes = os.listdir(os.path.join(case_path, time)) if dataset == False else os.listdir(os.path.join(os.path.dirname(case_path), "image",time))
+                imageslices = [item for item in allintimes if item.startswith("slice")] #Image Slices
+                for i in range(len(slices)):
+                    maskpath = os.path.join(case_path, time, "segmented", slices[i]) if dataset == False else os.path.join(case_path, time, slices[i])
+                    maskoverlay = utils.extract_and_draw_contours(maskpath)
+                    image = np.array(Image.open(os.path.join(case_path, time,imageslices[i]))) if dataset == False else np.array(Image.open(os.path.join(os.path.dirname(case_path), "image",time,imageslices[i])))
+                    overlaidimg = utils.overlay_images(image, maskoverlay)
+                    cv2.imwrite(os.path.join(check_path, time, imageslices[i]), overlaidimg)
+        else:
+            CTkMessagebox(master=self.window, message="Check folder can only be created for Results", icon="cancel")
+
+    def create_results(self, pathidx):
+        case_path = self.paths[pathidx][0]
+        all_items = os.listdir(case_path)
+        times = [item for item in all_items if item.startswith("time")]
+        times_with_segmentation = [time for time in times if os.path.isdir(os.path.join(case_path, time, "segmented"))]
+        if "/Images/" in case_path:
+            results_path = case_path.replace("Images", "Results")
+            if not os.path.exists(results_path):
+                os.makedirs(results_path)
+            for time in times_with_segmentation:
+                image_time_path = os.path.join(case_path, time)
+                results_time_path = os.path.join(results_path, time)
+                if not os.path.exists(results_time_path):
+                    os.makedirs(results_time_path)
+                shutil.copytree(image_time_path,results_time_path, dirs_exist_ok= True)
+        else:
+            CTkMessagebox(master=self.window, message="Incorrect folder path, Please make sure the case is within an \"Images\" folder", icon="cancel")
+        self.create_check(case_path = results_path)
+        
 
     def delete_button(self,pathidx):
         # Destroy the button that was right-clicked

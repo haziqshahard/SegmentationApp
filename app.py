@@ -11,6 +11,7 @@ from MaskViewer import *
 
 class App(ctk.CTk):
     """
+    #Add a commenting system for individual points with the right click
     """
     def __init__(self):
         super().__init__()
