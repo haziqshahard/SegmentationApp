@@ -388,7 +388,7 @@ class ViewHelper(ctk.CTkFrame):
     
     def render_polygon(self):
         polygoncolor = self.polygoncolor if self.debug == True else self.window.segmentor.polygoncolor
-        linewidth = self.line_width*self.scale_factor if self.debug == True else self.window.segmentor.line_width*self.scale_factor
+        linewidth = self.line_width*self.scale_factor if self.debug == True else 1
         if self.show_polygon:
             # print(f"Current time:{self.time_index}, Current Slice:{self.slice_index}")
             self.delete_polygon()
