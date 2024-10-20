@@ -260,7 +260,14 @@ class ViewHelper(ctk.CTkFrame):
 
         time_folder = self.time_folders[self.time_index]
         
-        self.mask_path = os.path.join(self.base_path, time_folder, "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
+        if self.debug == True:
+            self.mask_path = os.path.join(self.base_path, time_folder, "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
+        else:
+            #viewhelpertimeindex is relative to the viewhelper
+
+            folder = self.window.segmentor.base_path + "/" + time_folder + "/segmented" 
+            self.current_slice = int(os.path.basename(self.image_path)[5:8])
+            self.mask_path = folder + f"/Segmented Slice{self.current_slice:03d}.png"      
         # print(self.mask_path)
         # print(self.time_index, self.slice_index)
         if self.show_polygon:

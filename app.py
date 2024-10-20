@@ -162,16 +162,3 @@ class App(ctk.CTk):
             
 if __name__ == "__main__":
     app = App()
-    # app.mainloop()
-            
-
-# frame = CTkFrame(master=app, border_width=2)
-# frame.pack(expand=True)
-
-# btn = CTkButton(master=frame, text="Click Me", corner_radius=32,command=doNothing)
-# btn.place(relx=0.5, rely=0.5, anchor="center"_
-# tabview = CTkTabview(master=app)
-
-# tabview.pack(padx=20,pady=20)
-# tabview.add("Tab 1") #CAN USE TABS TO PLACE THE TYPE OF VIEWER YOU WANT
-# tabview.add("Tab 2")
