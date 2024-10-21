@@ -8,3 +8,4 @@ UNET.py
 save.txt
 image.png
 mask.png
+__pycache__/

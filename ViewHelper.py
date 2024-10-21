@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from CTkMessagebox import CTkMessagebox
 import ast
 import utils
+import platform
 
 class ViewHelper(ctk.CTkFrame):
     """
@@ -149,7 +150,7 @@ class ViewHelper(ctk.CTkFrame):
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
         self.context_menu.add_command(label="Toggle Drawn Polygon", command=self.toggle_polygon)
         self.context_menu.add_command(label="Invert All Folder Masks", command=self.invert_masks)
-        # self.context_menu.add_command(label="Switch to Images/Results", command=self.switchimgreslts)
+        self.context_menu.add_command(label="Switch to Images/Results", command=self.switchimgreslts)
 
         self.bind_keys()
         self.window.focus_set()
@@ -180,8 +181,10 @@ class ViewHelper(ctk.CTkFrame):
             self.window.bind("<Left>", self.on_key_press)
             self.window.bind("<Up>", self.on_key_press)
             self.window.bind("<Down>", self.on_key_press)
-
-        self.canvas.bind("<Button-3>", self.handle_right_click)
+        if platform.system() == "Darwin":  # macOS
+            self.canvas.bind("<Button-2>", self.handle_right_click)  # macOS
+        else:  # Windows 和 Linux 使用 Button-3
+            self.canvas.bind("<Button-3>", self.handle_right_click)
 
     def on_resize(self,event):
         self.root.grid_rowconfigure(0,minsize=self.root.winfo_height()*(9/10))
@@ -246,8 +249,8 @@ class ViewHelper(ctk.CTkFrame):
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
 
         if self.debug == False and (event.keysym == "A" or event.keysym == "a" or event.keysym == "D" or event.keysym == "d"):
-            self.slice_index = self.window.segmentor.slice_index
-            self.time_index = self.window.segmentor.time_index
+            self.time_index = self.time_folders.index(f"time{self.window.segmentor.current_time:03d}")
+            self.slice_index = self.slice_files[self.time_index].index(f"slice{self.window.segmentor.current_slice:03d}time{self.window.segmentor.current_time:03d}.png")
 
         self.updateimage(self.slice_index, self.time_index)
         # if self.debug == False and (event.keysym == "A" or event.keysym == "a" or event.keysym == "D" or event.keysym == "d"):
@@ -257,7 +260,14 @@ class ViewHelper(ctk.CTkFrame):
 
         time_folder = self.time_folders[self.time_index]
         
-        self.mask_path = os.path.join(self.base_path, time_folder, "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
+        if self.debug == True:
+            self.mask_path = os.path.join(self.base_path, time_folder, "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
+        else:
+            #viewhelpertimeindex is relative to the viewhelper
+
+            folder = self.window.segmentor.base_path + "/" + time_folder + "/segmented" 
+            self.current_slice = int(os.path.basename(self.image_path)[5:8])
+            self.mask_path = folder + f"/Segmented Slice{self.current_slice:03d}.png"      
         # print(self.mask_path)
         # print(self.time_index, self.slice_index)
         if self.show_polygon:
@@ -290,7 +300,7 @@ class ViewHelper(ctk.CTkFrame):
             "Results": "Images",
             "Images": "Results"
         }
-        
+
         if last_folder_name in folder_switch:
             # Construct the new base path
             base_path = os.path.join(
@@ -301,24 +311,21 @@ class ViewHelper(ctk.CTkFrame):
                 CTkMessagebox(master=self.window, message=f"Error Switching Image, path {base_path} does not exist\n")
                 # Fallback to the original base path
                 base_path = os.path.dirname(self.base_path)
-        
-        base_path = base_path.replace("/", "\\")
-        # print(base_path)
-
-        if os.path.exists(base_path):
-            #THE PATH DOES EXIST, WHICH IS WHY IT IS RELEASING AN ERROR, NEED TO ERROR CHECK!!!!
-            self.base_path = base_path
-            self.slice_files, self.time_folders = utils.load_images(self.base_path)
-            self.slice_index = 0
-            self.time_index = 0
-            self.load_image(self.slice_index, self.time_index)
-            if self.debug == False:
-                self.window.maskviewer.base_path = self.base_path
-                self.window.maskviewer.slice_index = 0
-                self.window.maskviewer.time_index = 0
-                self.window.maskviewer.loadimg()
-            self.labelinfo.configure(text=f"Time: {self.time_index+1:02d}/{len(self.time_folders)}, Slice: {self.slice_index+1:02d}/{len(self.slice_files[0])}")   
-        #This needs to also update the mask viewer so that it matches
+            else:
+                self.base_path = base_path
+                self.slice_files, self.time_folders = utils.load_images(self.base_path)
+                self.slice_index = 0
+                self.time_index = 0
+                self.load_image(self.slice_index, self.time_index)
+                if self.debug == False:
+                    self.window.maskviewer.base_path = self.base_path
+                    self.window.maskviewer.slice_index = 0
+                    self.window.maskviewer.time_index = 0
+                    self.window.maskviewer.loadimg()
+                self.labelinfo.configure(text=f"Time: {self.time_index+1:02d}/{len(self.time_folders)}, Slice: {self.slice_index+1:02d}/{len(self.slice_files[0])}")   
+            #This needs to also update the mask viewer so that it matches
+        else:
+            CTkMessagebox(master=self.window, message="Incorrect file path/structure for switching, please reconfigure", icon="cancel")
 
     def invert_masks(self):
         def invert_images_in_folder(folder_path):
@@ -381,7 +388,7 @@ class ViewHelper(ctk.CTkFrame):
     
     def render_polygon(self):
         polygoncolor = self.polygoncolor if self.debug == True else self.window.segmentor.polygoncolor
-        linewidth = self.line_width*self.scale_factor if self.debug == True else self.window.segmentor.line_width*self.scale_factor
+        linewidth = self.line_width*self.scale_factor if self.debug == True else 1
         if self.show_polygon:
             # print(f"Current time:{self.time_index}, Current Slice:{self.slice_index}")
             self.delete_polygon()

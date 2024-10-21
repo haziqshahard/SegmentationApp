@@ -11,6 +11,7 @@ from MaskViewer import *
 
 class App(ctk.CTk):
     """
+    #Add a commenting system for individual points with the right click
     """
     def __init__(self):
         super().__init__()
@@ -19,7 +20,7 @@ class App(ctk.CTk):
         ctk.set_appearance_mode(self.darklight)
         ctk.set_default_color_theme(self.theme)
         self.settings = {}
-        self.base_path = None
+        self.base_path = ""
         self.preloadcases()
         # Make the window fullscreen on the monitor
         self.attributes('-fullscreen', True)
@@ -127,8 +128,10 @@ class App(ctk.CTk):
                 check1, check2 = utils.load_images(self.base_path)
                 while len(check1) == 0 or len(check2)==0:
                     self.base_path = filedialog.askdirectory(title="Please select an initial case")
+                    check1, check2 = utils.load_images(self.base_path)
                     while self.base_path == '':
                         self.base_path= filedialog.askdirectory(title="Please select an initial case")
+                        check1, check2 = utils.load_images(self.base_path)
                 
             
         else:
@@ -138,8 +141,10 @@ class App(ctk.CTk):
             check1, check2 = utils.load_images(self.base_path)
             while len(check1) == 0 or len(check2)==0:
                 self.base_path = filedialog.askdirectory(title="Please select an initial case")
+                check1, check2 = utils.load_images(self.base_path)
                 while self.base_path == '':
                     self.base_path= filedialog.askdirectory(title="Please select an initial case")
+                    check1, check2 = utils.load_images(self.base_path)
 
     def load_image(self, slice_index = 0, time_index=0):
         """Load and display the image based on current slice and time index."""
@@ -161,16 +166,3 @@ class App(ctk.CTk):
             
 if __name__ == "__main__":
     app = App()
-    # app.mainloop()
-            
-
-# frame = CTkFrame(master=app, border_width=2)
-# frame.pack(expand=True)
-
-# btn = CTkButton(master=frame, text="Click Me", corner_radius=32,command=doNothing)
-# btn.place(relx=0.5, rely=0.5, anchor="center"_
-# tabview = CTkTabview(master=app)
-
-# tabview.pack(padx=20,pady=20)
-# tabview.add("Tab 1") #CAN USE TABS TO PLACE THE TYPE OF VIEWER YOU WANT
-# tabview.add("Tab 2")
