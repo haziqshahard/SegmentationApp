@@ -1,17 +1,15 @@
 import tkinter as tk 
-import re
 import customtkinter as ctk
 from CTkColorPicker import *
 from CTkMenuBar import *
 import ctk_color_picker_alpha as ctkpa
-from PIL import Image, ImageTk, ImageDraw,ImageOps
+from PIL import Image, ImageTk, ImageDraw
 from tkinter import filedialog
 import numpy as np
 import os
 from scipy.interpolate import splprep, splev
 from CTkMessagebox import CTkMessagebox
 import ast
-import cv2
 import utils
 import platform
 

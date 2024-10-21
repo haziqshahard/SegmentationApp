@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import os
 import re
-import ast
 from PIL import Image, ImageDraw, ImageTk
 
 def hextocomp(hex):

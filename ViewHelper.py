@@ -1,12 +1,8 @@
 import os   
-import re
 import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog
-from PIL import Image, ImageTk, ImageDraw,ImageOps
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
+from PIL import Image, ImageTk, ImageOps
 from CTkMessagebox import CTkMessagebox
 import ast
 import utils

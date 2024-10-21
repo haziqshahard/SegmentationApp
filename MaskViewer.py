@@ -3,7 +3,6 @@
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog
-import re
 import os
 from CTkMessagebox import CTkMessagebox
 from PIL import Image, ImageTk, ImageDraw, ImageFont
