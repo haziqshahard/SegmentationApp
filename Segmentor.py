@@ -13,6 +13,7 @@ from CTkMessagebox import CTkMessagebox
 import ast
 import cv2
 import utils
+import platform
 
 class PolygonDrawer(ctk.CTkFrame):
     """
@@ -223,6 +224,7 @@ class PolygonDrawer(ctk.CTkFrame):
         if self.polygoncolor == None:
             self.polygoncolor = (0,0,255,int(0.1*255))
 
+        self.bind_mouse_events()
     def selecttime(self):
         def submit_action():
             try:
@@ -401,6 +403,13 @@ class PolygonDrawer(ctk.CTkFrame):
                 self.delete_point(event, clicked_items[0])
         else:
             self.show_context_menu(event)
+
+    def bind_mouse_events(self):
+        self.canvas.bind("<Button-1>", self.on_mouse_down)
+        if platform.system() == "Darwin":  # macOS
+            self.canvas.bind("<Button-2>", self.handle_right_click)  # macOS
+        else:
+            self.canvas.bind("<Button-3>", self.handle_right_click)  # Windows/Linux
 
     def simulate_key(self, key):
         """Simulate a key press by creating a mock event."""
@@ -1028,66 +1037,56 @@ class PolygonDrawer(ctk.CTkFrame):
                     
                     smoothcav_coords = expand_polygon(smoothcav_coords, 2)
                     cavity = True
+
+                    #Drawing myocardium
+                    pointsnp = np.array(self.points)
+                    tck,u = splprep(pointsnp.T, s=0)
+                    smoothedmyopoints = np.array(splev(u_new, tck)).T
+                    smoothmyocoords = [tuple(point) for point in smoothedmyopoints]
+
+                    # Create two separate masks for the two polygons
+                    myo_mask = Image.new("L", self.pilimage.size, 0)
+                    cav_mask = Image.new("L", self.pilimage.size, 0)
+                    
+                    # Draw the polygons on their respective masks
+                    myo_draw = ImageDraw.Draw(myo_mask)
+                    cav_draw = ImageDraw.Draw(cav_mask)
+                    
+                    myo_draw.polygon(smoothmyocoords, fill=255)
+                    cav_draw.polygon(smoothcav_coords, fill=127)
+
+                    # Combine the masks and handle overlap
+                    image_size = self.pilimage.size
+                    for x in range(image_size[0]):
+                        for y in range(image_size[1]):
+                            myo_value = myo_mask.getpixel((x, y))
+                            cav_value = cav_mask.getpixel((x, y))
+                            
+                            if cav_value == 127 and myo_value == 255:
+                                # Overlap detected, set to 127
+                                draw.point((x, y), fill=255)
+                            elif cav_value == 127:
+                                # Non-overlapping cavity region
+                                draw.point((x, y), fill=127)
+                            elif myo_value == 255:
+                                # Non-overlapping myo region
+                                draw.point((x, y), fill=255)
+
+                    # mask.show()  # Display the visualization image
+                    
+                    if self.debug == True:
+                        impath = "mask.png"
+                        mask.save(impath)
+                        CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
+                    if not self.debug:
+                        folder = os.path.join(os.path.dirname(self.image_path), "segmented")
+                        os.makedirs(folder, exist_ok=True)
+                        impath = os.path.join(folder, f"Segmented Slice{self.current_slice:03d}.png")
+                        mask.save(impath)
+                        mode_msg = "New" if self.current_mode == "Draw" else "Edited"
+                        CTkMessagebox(title=f"{mode_msg} Mask Save", message=f"{mode_msg} Mask saved to {impath}", icon='check')
                 else:
                     CTkMessagebox(master=self.window, message="Please use \"C\" to allocate cavity points before saving",icon="warning")
-
-                #Drawing myocardium
-                pointsnp = np.array(self.points)
-                tck,u = splprep(pointsnp.T, s=0)
-                smoothedmyopoints = np.array(splev(u_new, tck)).T
-                smoothmyocoords = [tuple(point) for point in smoothedmyopoints]
-
-                # Create two separate masks for the two polygons
-                myo_mask = Image.new("L", self.pilimage.size, 0)
-                cav_mask = Image.new("L", self.pilimage.size, 0)
-                
-                # Draw the polygons on their respective masks
-                myo_draw = ImageDraw.Draw(myo_mask)
-                cav_draw = ImageDraw.Draw(cav_mask)
-                
-                myo_draw.polygon(smoothmyocoords, fill=255)
-                cav_draw.polygon(smoothcav_coords, fill=127)
-
-                # Combine the masks and handle overlap
-                image_size = self.pilimage.size
-                for x in range(image_size[0]):
-                    for y in range(image_size[1]):
-                        myo_value = myo_mask.getpixel((x, y))
-                        cav_value = cav_mask.getpixel((x, y))
-                        
-                        if cav_value == 127 and myo_value == 255:
-                            # Overlap detected, set to 127
-                            draw.point((x, y), fill=255)
-                        elif cav_value == 127:
-                            # Non-overlapping cavity region
-                            draw.point((x, y), fill=127)
-                        elif myo_value == 255:
-                            # Non-overlapping myo region
-                            draw.point((x, y), fill=255)
-
-                # mask.show()  # Display the visualization image
-                
-                if self.debug == True:
-                    impath = "mask.png"
-                    mask.save(impath)
-                    CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
-
-                if self.current_mode == "Draw" and self.debug==False:
-                    folder_path = os.path.dirname(self.image_path) + "/segmented"
-                    if not os.path.exists(folder_path):
-                        os.makedirs(folder_path)  # Creates folder and intermediate directories if they don't exist
-                    impath = folder_path + "/Segmented Slice" + f"{self.current_slice:03d}" + ".png"
-                    mask.save(impath)
-                    # label = ctk.CTkLabel(self.window.inforow, text=f"Edited Mask saved to {segmentedslice}", text_color="blue")
-                    # label.grid(row=0, column=0, sticky="nse")
-                    CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
-                elif self.current_mode == "Edit" and self.debug == False:
-                    folder = os.path.dirname(self.image_path) + "/segmented"
-                    segmentedslice = folder + f"/Segmented Slice{self.current_slice:03d}.png"
-                    mask.save(segmentedslice)
-                    # label = ctk.CTkLabel(self.window.inforow, text=f"Edited Mask saved to {segmentedslice}", text_color="blue")
-                    # label.grid(row=0, column=0, sticky="nse")
-                    CTkMessagebox(title="Edited Mask Save",message = f"Edited Mask saved to {segmentedslice}", icon='check')
 
     #----------HOVER EVENTS----------
     def on_hover_enter(self, event, dot):
