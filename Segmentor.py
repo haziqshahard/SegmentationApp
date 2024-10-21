@@ -420,17 +420,18 @@ class PolygonDrawer(ctk.CTkFrame):
         self.on_key_press(mock_event)
 
     def on_key_press(self,event):
-        self.updateswitchpoints()
         # print(f"Key pressed: {event.keysym}")  # Debugging line
         def updateimg():
             self.checkswitchpoints()
             self.updateimage(self.slice_index, self.time_index)
 
         if event.keysym == "a" or event.keysym =="A":
+            self.updateswitchpoints()
             self.slice_index = (self.slice_index - 1) % len(self.slice_files[self.time_index])
             updateimg()
             # print("A Clicked")
         if event.keysym == "d" or event.keysym =="D":
+            self.updateswitchpoints()
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
             updateimg()
 
