@@ -1,18 +1,17 @@
 import tkinter as tk 
-import re
 import customtkinter as ctk
 from CTkColorPicker import *
 from CTkMenuBar import *
 import ctk_color_picker_alpha as ctkpa
-from PIL import Image, ImageTk, ImageDraw,ImageOps
+from PIL import Image, ImageTk, ImageDraw
 from tkinter import filedialog
 import numpy as np
 import os
 from scipy.interpolate import splprep, splev
 from CTkMessagebox import CTkMessagebox
 import ast
-import cv2
 import utils
+import platform
 
 class PolygonDrawer(ctk.CTkFrame):
     """
@@ -122,6 +121,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.info = ctk.CTkFrame(master=self.root,fg_color="transparent", border_width=0)
         self.info.grid(row=1, column=2, padx=5, pady=(10,10),sticky="nse")
         self.info.grid_columnconfigure(0, weight=1)
+        self.info.grid_columnconfigure(1, weight=1)
         self.info.grid_rowconfigure(0, weight=1)
 
         #Info box for current slice/time
@@ -135,13 +135,15 @@ class PolygonDrawer(ctk.CTkFrame):
 
         #Info box for file movements
         self.moveinfo = ctk.CTkFrame(master=self.info,fg_color=self.currentmodedialog.cget('fg_color'))
-        self.moveinfo.grid(row=0, column=1, padx=(0,5), pady=0,sticky="ns")
+        self.moveinfo.grid(row=0, column=1, padx=(0,5), pady=0 ,sticky="ns")
         self.moveinfo.grid_rowconfigure(0, weight=1)
-        self.alabel = ctk.CTkLabel(master=self.moveinfo, text=f"A\nPrev. Slice", font=(self.font, self.fontsize-7), anchor='center', justify='center')
-        self.alabel.grid(row=0,column=0, padx=5, pady=(0,5), sticky="nsew")
-        self.dlabel = ctk.CTkLabel(master=self.moveinfo, text=f"D\nNext Slice", font=(self.font, self.fontsize-7), anchor='center', justify='center')
-        self.dlabel.grid(row=0,column=1, padx=5, pady=(0,5), sticky="nsew")
-        
+
+        abutton = ctk.CTkButton(master=self.moveinfo, text=f"A\nPrevious Slice", font=(self.font, self.fontsize-7), fg_color=self.filelabel.cget("fg_color"), command=lambda:self.simulate_key("a"))
+        abutton.grid(row=0,column=0, padx=5, pady=(5,5), sticky="ns")
+
+        dbutton = ctk.CTkButton(master=self.moveinfo, text=f"D\nNext Slice", font=(self.font, self.fontsize-7), fg_color=self.filelabel.cget("fg_color"), command=lambda:self.simulate_key("d"))
+        dbutton.grid(row=0,column=1, padx=5, pady=(5,5), sticky="ns")
+
         #Display image on canvas
         self.canvimg=self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items
 
@@ -220,6 +222,7 @@ class PolygonDrawer(ctk.CTkFrame):
         if self.polygoncolor == None:
             self.polygoncolor = (0,0,255,int(0.1*255))
 
+        self.bind_mouse_events()
     def selecttime(self):
         def submit_action():
             try:
@@ -399,20 +402,39 @@ class PolygonDrawer(ctk.CTkFrame):
         else:
             self.show_context_menu(event)
 
+    def bind_mouse_events(self):
+        self.canvas.bind("<Button-1>", self.on_mouse_down)
+        if platform.system() == "Darwin":  # macOS
+            self.canvas.bind("<Button-2>", self.handle_right_click)  # macOS
+        else:
+            self.canvas.bind("<Button-3>", self.handle_right_click)  # Windows/Linux
+
+    def simulate_key(self, key):
+        """Simulate a key press by creating a mock event."""
+        class MockEvent:
+            def __init__(self, keysym):
+                self.keysym = keysym
+        
+        # Simulate the key press by calling on_key_press with a mock event
+        mock_event = MockEvent(key)
+        self.on_key_press(mock_event)
+
     def on_key_press(self,event):
-        self.updateswitchpoints()
         # print(f"Key pressed: {event.keysym}")  # Debugging line
+        def updateimg():
+            self.checkswitchpoints()
+            self.updateimage(self.slice_index, self.time_index)
 
         if event.keysym == "a" or event.keysym =="A":
+            self.updateswitchpoints()
             self.slice_index = (self.slice_index - 1) % len(self.slice_files[self.time_index])
+            updateimg()
             # print("A Clicked")
         if event.keysym == "d" or event.keysym =="D":
+            self.updateswitchpoints()
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
-            # print("D Clicked")
+            updateimg()
 
-        # self.delete_polygon()
-        self.checkswitchpoints()
-        self.updateimage(self.slice_index, self.time_index)
 
     def switchplacecavity(self,event):
         clicked_items = self.canvas.find_withtag("current")
@@ -520,7 +542,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.scaledpoints = [(a * self.scale_factor, b * self.scale_factor) for a, b in self.points] #Scale all the original points to match the current scale
 
     def add_point(self,event,type="myocardium"):
-        print("Adding Point")
+        # print("Adding Point")
         x,y = event.x, event.y #Collect coords of event based on the current scale
         # if type == "myocardium":
         self.points.append((x/self.scale_factor, y/self.scale_factor)) #Coords of events based on the original scale
@@ -1014,66 +1036,56 @@ class PolygonDrawer(ctk.CTkFrame):
                     
                     smoothcav_coords = expand_polygon(smoothcav_coords, 2)
                     cavity = True
+
+                    #Drawing myocardium
+                    pointsnp = np.array(self.points)
+                    tck,u = splprep(pointsnp.T, s=0)
+                    smoothedmyopoints = np.array(splev(u_new, tck)).T
+                    smoothmyocoords = [tuple(point) for point in smoothedmyopoints]
+
+                    # Create two separate masks for the two polygons
+                    myo_mask = Image.new("L", self.pilimage.size, 0)
+                    cav_mask = Image.new("L", self.pilimage.size, 0)
+                    
+                    # Draw the polygons on their respective masks
+                    myo_draw = ImageDraw.Draw(myo_mask)
+                    cav_draw = ImageDraw.Draw(cav_mask)
+                    
+                    myo_draw.polygon(smoothmyocoords, fill=255)
+                    cav_draw.polygon(smoothcav_coords, fill=127)
+
+                    # Combine the masks and handle overlap
+                    image_size = self.pilimage.size
+                    for x in range(image_size[0]):
+                        for y in range(image_size[1]):
+                            myo_value = myo_mask.getpixel((x, y))
+                            cav_value = cav_mask.getpixel((x, y))
+                            
+                            if cav_value == 127 and myo_value == 255:
+                                # Overlap detected, set to 127
+                                draw.point((x, y), fill=255)
+                            elif cav_value == 127:
+                                # Non-overlapping cavity region
+                                draw.point((x, y), fill=127)
+                            elif myo_value == 255:
+                                # Non-overlapping myo region
+                                draw.point((x, y), fill=255)
+
+                    # mask.show()  # Display the visualization image
+                    
+                    if self.debug == True:
+                        impath = "mask.png"
+                        mask.save(impath)
+                        CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
+                    if not self.debug:
+                        folder = os.path.join(os.path.dirname(self.image_path), "segmented")
+                        os.makedirs(folder, exist_ok=True)
+                        impath = os.path.join(folder, f"Segmented Slice{self.current_slice:03d}.png")
+                        mask.save(impath)
+                        mode_msg = "New" if self.current_mode == "Draw" else "Edited"
+                        CTkMessagebox(title=f"{mode_msg} Mask Save", message=f"{mode_msg} Mask saved to {impath}", icon='check')
                 else:
                     CTkMessagebox(master=self.window, message="Please use \"C\" to allocate cavity points before saving",icon="warning")
-
-                #Drawing myocardium
-                pointsnp = np.array(self.points)
-                tck,u = splprep(pointsnp.T, s=0)
-                smoothedmyopoints = np.array(splev(u_new, tck)).T
-                smoothmyocoords = [tuple(point) for point in smoothedmyopoints]
-
-                # Create two separate masks for the two polygons
-                myo_mask = Image.new("L", self.pilimage.size, 0)
-                cav_mask = Image.new("L", self.pilimage.size, 0)
-                
-                # Draw the polygons on their respective masks
-                myo_draw = ImageDraw.Draw(myo_mask)
-                cav_draw = ImageDraw.Draw(cav_mask)
-                
-                myo_draw.polygon(smoothmyocoords, fill=255)
-                cav_draw.polygon(smoothcav_coords, fill=127)
-
-                # Combine the masks and handle overlap
-                image_size = self.pilimage.size
-                for x in range(image_size[0]):
-                    for y in range(image_size[1]):
-                        myo_value = myo_mask.getpixel((x, y))
-                        cav_value = cav_mask.getpixel((x, y))
-                        
-                        if cav_value == 127 and myo_value == 255:
-                            # Overlap detected, set to 127
-                            draw.point((x, y), fill=255)
-                        elif cav_value == 127:
-                            # Non-overlapping cavity region
-                            draw.point((x, y), fill=127)
-                        elif myo_value == 255:
-                            # Non-overlapping myo region
-                            draw.point((x, y), fill=255)
-
-                # mask.show()  # Display the visualization image
-                
-                if self.debug == True:
-                    impath = "mask.png"
-                    mask.save(impath)
-                    CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
-
-                if self.current_mode == "Draw" and self.debug==False:
-                    folder_path = os.path.dirname(self.image_path) + "/segmented"
-                    if not os.path.exists(folder_path):
-                        os.makedirs(folder_path)  # Creates folder and intermediate directories if they don't exist
-                    impath = folder_path + "/Segmented Slice" + f"{self.current_slice:03d}" + ".png"
-                    mask.save(impath)
-                    # label = ctk.CTkLabel(self.window.inforow, text=f"Edited Mask saved to {segmentedslice}", text_color="blue")
-                    # label.grid(row=0, column=0, sticky="nse")
-                    CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
-                elif self.current_mode == "Edit" and self.debug == False:
-                    folder = os.path.dirname(self.image_path) + "/segmented"
-                    segmentedslice = folder + f"/Segmented Slice{self.current_slice:03d}.png"
-                    mask.save(segmentedslice)
-                    # label = ctk.CTkLabel(self.window.inforow, text=f"Edited Mask saved to {segmentedslice}", text_color="blue")
-                    # label.grid(row=0, column=0, sticky="nse")
-                    CTkMessagebox(title="Edited Mask Save",message = f"Edited Mask saved to {segmentedslice}", icon='check')
 
     #----------HOVER EVENTS----------
     def on_hover_enter(self, event, dot):

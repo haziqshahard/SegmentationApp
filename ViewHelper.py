@@ -1,15 +1,12 @@
 import os   
-import re
 import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog
-from PIL import Image, ImageTk, ImageDraw,ImageOps
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
+from PIL import Image, ImageTk, ImageOps
 from CTkMessagebox import CTkMessagebox
 import ast
 import utils
+import platform
 
 class ViewHelper(ctk.CTkFrame):
     """
@@ -116,38 +113,40 @@ class ViewHelper(ctk.CTkFrame):
         self.labelinfo.grid(row=0,column=0, padx=10, sticky="")
 
         #---------MOVEMENT INFO BOX---------
-        self.moveinfo = ctk.CTkFrame(master=self.root)
-        self.moveinfo.grid(row=1, column=0, padx=(10,10), pady=7,sticky="e")
+        self.moveinfo = ctk.CTkFrame(master=self.root, width = 10)
+        self.moveinfo.grid(row=1, column=0, padx=(10,10), pady=5, sticky="e")
         self.moveinfo.rowconfigure(0, weight=0)
         self.moveinfo.rowconfigure(1, weight=0)
         self.labelfontsize = 15
-
         padx=4
+        pady=0
+
         upbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-        upbox.grid(row=0,column=1, padx=padx, pady=0, sticky="nsew")
-        uplabel = ctk.CTkLabel(master=upbox, text=f"△", font=(self.font, self.labelfontsize,'bold'), anchor='center', justify='center')
-        uplabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+        upbox.grid(row=0,column=1, padx=padx, pady=0, sticky="ns")
+        upbutton = ctk.CTkButton(master=upbox, text=f"△", font=(self.font, self.labelfontsize,'bold'), command=lambda:self.simulate_key("Up"), fg_color=upbox.cget("fg_color"), width=20, height=25)
+        upbutton.grid(row=0,column=0, padx=7, pady=(1,1), sticky="ns")
         
         downbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-        downbox.grid(row=1,column=1, padx=padx, pady=0, sticky="nsew")
-        downlabel = ctk.CTkLabel(master=downbox, text=f"▽", font=(self.font, self.labelfontsize,'bold'), anchor='center', justify='center')
-        downlabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+        downbox.grid(row=1,column=1, padx=padx, pady=pady, sticky="ns")
+        downbox.grid_rowconfigure(0, weight=1)
+        downbutton = ctk.CTkButton(master=downbox, text=f"▽", font=(self.font, self.labelfontsize,'bold'), command=lambda:self.simulate_key("Down"), fg_color=upbox.cget("fg_color"), width=20, height=25)
+        downbutton.grid(row=0,column=0, padx=7, pady=(5,1), sticky="ns")
         
         leftbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-        leftbox.grid(row=1,column=0, padx=(padx,0), pady=0, sticky="nsew")
-        leftlabel = ctk.CTkLabel(master=leftbox, text=f"◁", font=(self.font, self.labelfontsize+10,'bold'), anchor='center', justify='center')
-        leftlabel.grid(row=0,column=0, padx=7, pady=(1,1), sticky="nsew")
+        leftbox.grid(row=1,column=0, padx=(padx,0), pady=pady, sticky="ns")
+        leftbutton = ctk.CTkButton(master=leftbox, text=f"◁", font=(self.font, self.labelfontsize+10,'bold'),command=lambda:self.simulate_key("Left"), fg_color=upbox.cget("fg_color"), width=20, height=25)
+        leftbutton.grid(row=0,column=0, padx=7, pady=(5,5), sticky="ns")
 
         rightbox = ctk.CTkFrame(master=self.moveinfo, border_width =1)
-        rightbox.grid(row=1,column=2, padx=(0,padx), pady=0, sticky="nsew")
-        rightlabel = ctk.CTkLabel(master=rightbox, text=f"▷", font=(self.font, self.labelfontsize+10,'bold'), anchor='center', justify='center')
-        rightlabel.grid(row=1,column=2, padx=7, pady=(1,1), sticky="nsew")
+        rightbox.grid(row=1,column=2, padx=(0,padx), pady=pady, sticky="ns")
+        rightbutton = ctk.CTkButton(master=rightbox, text=f"▷", font=(self.font, self.labelfontsize+10,'bold'), command=lambda:self.simulate_key("Right"), fg_color=upbox.cget("fg_color"), width=20, height=25)
+        rightbutton.grid(row=1,column=2, padx=7, pady=(5,5), sticky="ns")
 
         #---------Context Menu---------
         self.context_menu = tk.Menu(master=self.root, tearoff=0)
         self.context_menu.add_command(label="Toggle Drawn Polygon", command=self.toggle_polygon)
         self.context_menu.add_command(label="Invert All Folder Masks", command=self.invert_masks)
-        # self.context_menu.add_command(label="Switch to Images/Results", command=self.switchimgreslts)
+        self.context_menu.add_command(label="Switch to Images/Results", command=self.switchimgreslts)
 
         self.bind_keys()
         self.window.focus_set()
@@ -178,8 +177,10 @@ class ViewHelper(ctk.CTkFrame):
             self.window.bind("<Left>", self.on_key_press)
             self.window.bind("<Up>", self.on_key_press)
             self.window.bind("<Down>", self.on_key_press)
-
-        self.canvas.bind("<Button-3>", self.handle_right_click)
+        if platform.system() == "Darwin":  # macOS
+            self.canvas.bind("<Button-2>", self.handle_right_click)  # macOS
+        else:  # Windows 和 Linux 使用 Button-3
+            self.canvas.bind("<Button-3>", self.handle_right_click)
 
     def on_resize(self,event):
         self.root.grid_rowconfigure(0,minsize=self.root.winfo_height()*(9/10))
@@ -219,6 +220,16 @@ class ViewHelper(ctk.CTkFrame):
         self.delete_polygon()
         self.render_polygon()
 
+    def simulate_key(self, key):
+        """Simulate a key press by creating a mock event."""
+        class MockEvent:
+            def __init__(self, keysym):
+                self.keysym = keysym
+        
+        # Simulate the key press by calling on_key_press with a mock event
+        mock_event = MockEvent(key)
+        self.on_key_press(mock_event)
+
     def on_key_press(self, event):
         """Handle key press events."""
         # print(f"Key pressed: {event.keysym}")  # Debugging line
@@ -234,8 +245,8 @@ class ViewHelper(ctk.CTkFrame):
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
 
         if self.debug == False and (event.keysym == "A" or event.keysym == "a" or event.keysym == "D" or event.keysym == "d"):
-            self.slice_index = self.window.segmentor.slice_index
-            self.time_index = self.window.segmentor.time_index
+            self.time_index = self.time_folders.index(f"time{self.window.segmentor.current_time:03d}")
+            self.slice_index = self.slice_files[self.time_index].index(f"slice{self.window.segmentor.current_slice:03d}time{self.window.segmentor.current_time:03d}.png")
 
         self.updateimage(self.slice_index, self.time_index)
         # if self.debug == False and (event.keysym == "A" or event.keysym == "a" or event.keysym == "D" or event.keysym == "d"):
@@ -245,7 +256,14 @@ class ViewHelper(ctk.CTkFrame):
 
         time_folder = self.time_folders[self.time_index]
         
-        self.mask_path = os.path.join(self.base_path, time_folder, "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
+        if self.debug == True:
+            self.mask_path = os.path.join(self.base_path, time_folder, "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
+        else:
+            #viewhelpertimeindex is relative to the viewhelper
+
+            folder = self.window.segmentor.base_path + "/" + time_folder + "/segmented" 
+            self.current_slice = int(os.path.basename(self.image_path)[5:8])
+            self.mask_path = folder + f"/Segmented Slice{self.current_slice:03d}.png"      
         # print(self.mask_path)
         # print(self.time_index, self.slice_index)
         if self.show_polygon:
@@ -278,7 +296,7 @@ class ViewHelper(ctk.CTkFrame):
             "Results": "Images",
             "Images": "Results"
         }
-        
+
         if last_folder_name in folder_switch:
             # Construct the new base path
             base_path = os.path.join(
@@ -289,24 +307,21 @@ class ViewHelper(ctk.CTkFrame):
                 CTkMessagebox(master=self.window, message=f"Error Switching Image, path {base_path} does not exist\n")
                 # Fallback to the original base path
                 base_path = os.path.dirname(self.base_path)
-        
-        base_path = base_path.replace("/", "\\")
-        # print(base_path)
-
-        if os.path.exists(base_path):
-            #THE PATH DOES EXIST, WHICH IS WHY IT IS RELEASING AN ERROR, NEED TO ERROR CHECK!!!!
-            self.base_path = base_path
-            self.slice_files, self.time_folders = utils.load_images(self.base_path)
-            self.slice_index = 0
-            self.time_index = 0
-            self.load_image(self.slice_index, self.time_index)
-            if self.debug == False:
-                self.window.maskviewer.base_path = self.base_path
-                self.window.maskviewer.slice_index = 0
-                self.window.maskviewer.time_index = 0
-                self.window.maskviewer.loadimg()
-            self.labelinfo.configure(text=f"Time: {self.time_index+1:02d}/{len(self.time_folders)}, Slice: {self.slice_index+1:02d}/{len(self.slice_files[0])}")   
-        #This needs to also update the mask viewer so that it matches
+            else:
+                self.base_path = base_path
+                self.slice_files, self.time_folders = utils.load_images(self.base_path)
+                self.slice_index = 0
+                self.time_index = 0
+                self.load_image(self.slice_index, self.time_index)
+                if self.debug == False:
+                    self.window.maskviewer.base_path = self.base_path
+                    self.window.maskviewer.slice_index = 0
+                    self.window.maskviewer.time_index = 0
+                    self.window.maskviewer.loadimg()
+                self.labelinfo.configure(text=f"Time: {self.time_index+1:02d}/{len(self.time_folders)}, Slice: {self.slice_index+1:02d}/{len(self.slice_files[0])}")   
+            #This needs to also update the mask viewer so that it matches
+        else:
+            CTkMessagebox(master=self.window, message="Incorrect file path/structure for switching, please reconfigure", icon="cancel")
 
     def invert_masks(self):
         def invert_images_in_folder(folder_path):
@@ -369,7 +384,7 @@ class ViewHelper(ctk.CTkFrame):
     
     def render_polygon(self):
         polygoncolor = self.polygoncolor if self.debug == True else self.window.segmentor.polygoncolor
-        linewidth = self.line_width*self.scale_factor if self.debug == True else self.window.segmentor.line_width*self.scale_factor
+        linewidth = self.line_width*self.scale_factor if self.debug == True else 1
         if self.show_polygon:
             # print(f"Current time:{self.time_index}, Current Slice:{self.slice_index}")
             self.delete_polygon()

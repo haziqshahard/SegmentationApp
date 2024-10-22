@@ -3,7 +3,6 @@
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog
-import re
 import os
 from CTkMessagebox import CTkMessagebox
 from PIL import Image, ImageTk, ImageDraw, ImageFont
@@ -131,8 +130,8 @@ class MaskViewer(ctk.CTkFrame):
             self.slice_index = (self.slice_index + 1) % len(self.slice_files[self.time_index])
 
         if self.debug == False and (event.keysym == "A" or event.keysym == "a" or event.keysym == "D" or event.keysym == "d"):
-            self.slice_index = self.window.master.segmentor.slice_index
-            self.time_index = self.window.master.segmentor.time_index
+            self.time_index = self.time_folders.index(f"time{self.window.master.segmentor.current_time:03d}")
+            self.slice_index = self.slice_files[self.time_index].index(f"slice{self.window.master.segmentor.current_slice:03d}time{self.window.master.segmentor.current_time:03d}.png")
 
         self.updateimage(self.slice_index, self.time_index)
         self.mask_path = os.path.join(self.base_path, self.time_folders[self.time_index], "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
