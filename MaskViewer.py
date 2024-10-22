@@ -8,6 +8,7 @@ import os
 from CTkMessagebox import CTkMessagebox
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 import utils
+from PIL import ImageFont
 
 class MaskViewer(ctk.CTkFrame):
     def __init__(self, window, debug=False, row=1, column=1, theme="blue",darklight="dark"):
@@ -81,8 +82,7 @@ class MaskViewer(ctk.CTkFrame):
             # Create a Draw object
             draw = ImageDraw.Draw(img)
             # Optionally, load a font (default font is used if not specified)
-            font = ImageFont.truetype("arial.ttf", 40)  # Use default font
-            # Alternatively, you can specify a font: font = ImageFont.truetype("arial.ttf", font_size)
+            font = ImageFont.load_default()            # Alternatively, you can specify a font: font = ImageFont.truetype("arial.ttf", font_size)
 
             # Get the bounding box for the text
             text_bbox = draw.textbbox((0, 0), text, font=font)
