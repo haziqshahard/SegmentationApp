@@ -7,7 +7,7 @@ import os
 from CTkMessagebox import CTkMessagebox
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 import utils
-import platform
+from PIL import ImageFont
 
 class MaskViewer(ctk.CTkFrame):
     def __init__(self, window, debug=False, row=1, column=1, theme="blue",darklight="dark"):
@@ -81,20 +81,7 @@ class MaskViewer(ctk.CTkFrame):
             # Create a Draw object
             draw = ImageDraw.Draw(img)
             # Optionally, load a font (default font is used if not specified)
-            # font = ImageFont.truetype("arial.ttf", 40)  # Use default font
-            # Alternatively, you can specify a font: font = ImageFont.truetype("arial.ttf", font_size)
-            # Attempt to load a specified font, if it fails, fall back to default font
-            try:
-                # Check if running on macOS and use macOS-specific font path if necessary
-                if os.name == "posix" and platform.system() == "Darwin":
-                    font_path = "/Library/Fonts/Arial.ttf"  # macOS default font path
-                else:
-                    font_path = "arial.ttf"  # Default font path (for Windows)
-
-                font = ImageFont.truetype(font_path, 40)
-            except OSError:
-                # If the font file cannot be opened, use the default font
-                font = ImageFont.load_default()
+            font = ImageFont.load_default()            # Alternatively, you can specify a font: font = ImageFont.truetype("arial.ttf", font_size)
 
             # Get the bounding box for the text
             text_bbox = draw.textbbox((0, 0), text, font=font)
