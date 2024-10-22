@@ -395,6 +395,7 @@ class CaseSelector(ctk.CTkFrame):
                 if not os.path.exists(os.path.join(check_path, time)):
                     os.makedirs(os.path.join(check_path, time)) 
                 slices = os.listdir(os.path.join(case_path, time, "segmented")) if dataset == False else os.listdir(os.path.join(case_path, time)) #Mask Slices
+                slices = [slice for slice in slices if slice.startswith("Segmented")]
                 allintimes = os.listdir(os.path.join(case_path, time)) if dataset == False else os.listdir(os.path.join(os.path.dirname(case_path), "image",time))
                 imageslices = [item for item in allintimes if item.startswith("slice")] #Image Slices
                 for i in range(len(slices)):
