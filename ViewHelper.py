@@ -385,6 +385,7 @@ class ViewHelper(ctk.CTkFrame):
     def render_polygon(self):
         polygoncolor = self.polygoncolor if self.debug == True else self.window.segmentor.polygoncolor
         linewidth = self.line_width*self.scale_factor if self.debug == True else 1
+        linecolor = self.line_color if self.debug == True else self.window.segmentor.linecolor
         if self.show_polygon:
             # print(f"Current time:{self.time_index}, Current Slice:{self.slice_index}")
             self.delete_polygon()
@@ -402,15 +403,15 @@ class ViewHelper(ctk.CTkFrame):
                         self.canvas.tag_lower(self.polytag, lowest_item_id)
                     for i in range(len(self.scaledpoints) - 1):
                         if "cavity" in self.currentdottags[i] and "cavity" in self.currentdottags[i+1]:
-                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=utils.hextocomp(self.linecolor), tags=("line","cavity"), width = linewidth)
+                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=utils.hextocomp(linecolor), tags=("line","cavity"), width = linewidth)
                         else:
-                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=self.linecolor, tags="line", width = linewidth)               
+                            line = self.canvas.create_line(self.scaledpoints[i], self.scaledpoints[i+1], fill=linecolor, tags="line", width = linewidth)               
                         self.lines.append(line)
                     if len(self.points) > 2 and self.points[0] != self.points[-1]:
                         if "cavity" in self.currentdottags[-1] and "cavity" in self.currentdottags[0]:
-                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=utils.hextocomp(self.linecolor), tags=("line","cavity"), width = linewidth)
+                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=utils.hextocomp(linecolor), tags=("line","cavity"), width = linewidth)
                         else:
-                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=self.linecolor, tags="line", width = linewidth)               
+                            line = self.canvas.create_line(self.scaledpoints[-1], self.scaledpoints[0], fill=linecolor, tags="line", width = linewidth)               
                         self.lines.append(line)
             
         else:
