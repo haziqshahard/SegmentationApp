@@ -178,11 +178,13 @@ class CaseSelector(ctk.CTkFrame):
 
     def write_info(self, dataset_case_dir, case, ES, ED):
         try:
-            with open(f"{os.path.join(case.replace("Results", "Images"), "scale.txt")}", mode="r") as scaletxt:
+            #with open(f"{os.path.join(case.replace("Results", "Images"), "scale.txt")}", mode="r") as scaletxt:
+            with open(f"{os.path.join(case.replace('Results', 'Images'), 'scale.txt')}", mode='r') as scaletxt:
                 # Perform operations with scaletxt
                 scale = scaletxt.read()  # Example read operation
         except FileNotFoundError:
-            raise FileNotFoundError(f"The file at path {f"{os.path.join(case.replace("Results", "Images"), "scale.txt")}"} was not found.")
+            #raise FileNotFoundError(f"The file at path {f"{os.path.join(case.replace("Results", "Images"), "scale.txt")}"} was not found.")
+            raise FileNotFoundError(f'The file at path {os.path.join(case.replace("Results", "Images"), "scale.txt")} was not found.')
         
         all_items = os.listdir(case.replace("Results", "Images"))
         nbframe = len([item for item in all_items if item.startswith("time")])
@@ -191,7 +193,8 @@ class CaseSelector(ctk.CTkFrame):
             txt.write(f"ES:{ES}\n")
             txt.write(f"ED:{ED}\n")
             txt.write(f"NbFrame:{nbframe}\n")
-            txt.write(f"Spacing: {scale if len(scale) != 0 else "Scale not available"}")
+            #txt.write(f"Spacing: {scale if len(scale) != 0 else "Scale not available"}")
+            txt.write(f"Spacing: {scale if len(scale) != 0 else 'Scale not available'}")
 
     def determine_ES_ED(self, time_folders, casepath):
         mask1path = os.path.join(casepath, time_folders[0], "segmented","Segmented Slice001.png")
@@ -353,6 +356,7 @@ class CaseSelector(ctk.CTkFrame):
         btn = ctk.CTkButton(master=self.scrollframe, height=30, text=f"{case}", 
                             font=(self.font,self.fontsize),anchor="w")
         btn.bind("<Button-1>", command=lambda event, path=path: self.loadcase(event, path = path))
+        btn.bind("<Button-2>", command=lambda event, path=path: self.handle_right_click(event, path = path))
         btn.bind("<Button-3>", command=lambda event, path=path: self.handle_right_click(event, path = path))
         self.buttons.append(btn)
     
