@@ -12,7 +12,7 @@ from CTkMessagebox import CTkMessagebox
 import ast
 import utils
 import platform
-
+from time import time
 class PolygonDrawer(ctk.CTkFrame):
     """
     #Window that enables the user to draw on the image required
@@ -40,7 +40,7 @@ class PolygonDrawer(ctk.CTkFrame):
             ctk.set_default_color_theme(self.window.theme)  # Other themes: "blue", "green"
         else:
             ctk.set_default_color_theme("blue")
-        self.fontsize = 20
+        self.fontsize = 17
         self.font = 'Helvetica'
         self.settings = {}
 
@@ -138,11 +138,11 @@ class PolygonDrawer(ctk.CTkFrame):
         self.moveinfo.grid(row=0, column=1, padx=(0,5), pady=0 ,sticky="ns")
         self.moveinfo.grid_rowconfigure(0, weight=1)
 
-        abutton = ctk.CTkButton(master=self.moveinfo, text=f"A\nPrevious Slice", font=(self.font, self.fontsize-7), fg_color=self.filelabel.cget("fg_color"), command=lambda:self.simulate_key("a"))
-        abutton.grid(row=0,column=0, padx=5, pady=(5,5), sticky="ns")
+        self.abutton = ctk.CTkButton(master=self.moveinfo, text=f"A\nPrevious Slice", font=(self.font, self.fontsize-7), fg_color=self.filelabel.cget("fg_color"), command=lambda:self.simulate_key("a"))
+        self.abutton.grid(row=0,column=0, padx=5, pady=(5,5), sticky="ns")
 
-        dbutton = ctk.CTkButton(master=self.moveinfo, text=f"D\nNext Slice", font=(self.font, self.fontsize-7), fg_color=self.filelabel.cget("fg_color"), command=lambda:self.simulate_key("d"))
-        dbutton.grid(row=0,column=1, padx=5, pady=(5,5), sticky="ns")
+        self.dbutton = ctk.CTkButton(master=self.moveinfo, text=f"D\nNext Slice", font=(self.font, self.fontsize-7), fg_color=self.filelabel.cget("fg_color"), command=lambda:self.simulate_key("d"))
+        self.dbutton.grid(row=0,column=1, padx=5, pady=(5,5), sticky="ns")
 
         #Display image on canvas
         self.canvimg=self.canvas.create_image(0,0,image=self.photo, anchor=tk.NW, tags="image") #tagged to easily access from the canvas items
@@ -264,7 +264,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.window.segmentor = PolygonDrawer(self.window, row=0, column=0)
 
     def on_resize(self,event):
-         #Implemented from https://www.tutorialspoint.com/how-to-set-the-canvas-size-properly-in-tkinter
+        #Implemented from https://www.tutorialspoint.com/how-to-set-the-canvas-size-properly-in-tkinter
         #Initializing new width and height        
 
         scale_x = self.canvas.winfo_width() / self.original_width
@@ -284,9 +284,6 @@ class PolygonDrawer(ctk.CTkFrame):
         #Debugging step - for whatever reason it initializes at 0
         if new_height == 0:
             new_height = 1
-
-        # print("new_width: ", new_width)
-        # print("new_height: ", new_height)
 
         #Scaling image and photo
         scaled_image = self.pilimage.resize((new_width, new_height), Image.Resampling.LANCZOS)
@@ -310,6 +307,19 @@ class PolygonDrawer(ctk.CTkFrame):
 
         self.root.grid_rowconfigure(0,minsize=self.root.winfo_height()*(9/10))
         self.root.grid_rowconfigure(1,minsize=self.root.winfo_height()*(1/10))
+
+        #Scaling all text on screen
+        self.filelabel.configure(font = (self.font,(self.fontsize-3)*self.scale_factor,'bold'))
+        self.modelabel.configure(font= (self.font, self.fontsize*self.scale_factor))
+        self.btn.configure(font= (self.font, self.fontsize*self.scale_factor))
+        self.abutton.configure(font= (self.font, (self.fontsize-7)*self.scale_factor))
+        self.dbutton.configure(font= (self.font, (self.fontsize-7)*self.scale_factor))
+        self.abutton.grid_configure(padx = 5*self.scale_factor, pady=5*self.scale_factor)
+        self.dbutton.grid_configure(padx = 5*self.scale_factor, pady=5*self.scale_factor)
+
+        self.root.grid_columnconfigure(0, minsize=self.current_width * (1/5))
+        self.root.grid_columnconfigure(1, minsize=self.current_width * (1/5))
+        self.root.grid_columnconfigure(2, minsize=self.current_width * (3/5))
 
     def on_mouse_down(self,event):
         self.event_data["x"]= event.x
@@ -704,6 +714,8 @@ class PolygonDrawer(ctk.CTkFrame):
         self.sliders(self,dotWindow, "dot_size", "Dot Size: ", (1,20), 0)
         colorpicker = CTkColorPicker(dotWindow, command = lambda e: assign(e), orientation="horizontal",corner_radius=10)
         colorpicker.grid(row=1,column=0,padx=5,pady=(0,5))
+
+        self.save_settings()
         
     def redrawsave_settings(self):
         "Just has to have a slider to display the number of points to redraw"
@@ -717,6 +729,7 @@ class PolygonDrawer(ctk.CTkFrame):
 
         self.sliders(self,redrawWindow, "numpoints", "Number of Redraw Points: ", (40,100), 0)
         self.sliders(self,redrawWindow, "smoothing", "Smoothing Value: ", (20,200),1)
+        self.save_settings()
     
     def line_settings(self):
         """Expected settings to change for line:
@@ -740,6 +753,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.sliders(self,lineWindow, "line_width", "Line Width: ", (1,20), 0)
         colorpicker = CTkColorPicker(lineWindow, command = lambda e: assign(e), orientation="horizontal",corner_radius=10)
         colorpicker.grid(row=1,column=0,padx=5,pady=(0,5))
+        self.save_settings()
 
     #----------POLYGON ACTIONS----------
     def show_context_menu(self, event):
@@ -778,7 +792,7 @@ class PolygonDrawer(ctk.CTkFrame):
                 except IndexError:
                     print(f"Dottags Length:{len(self.currentdottags)}")
                     print(f"Index attempted:{[i,i+1]}")
-                    print(f"{self.currentdottags[i+1]}")
+                    print(f"{self.currentdottags[i]}")
                 self.lines.append(line)
                 # Bind hover events to the line
                 self.canvas.tag_bind(line, "<Enter>", lambda e,l=line: self.on_line_hover_enter(e,l))
@@ -925,12 +939,12 @@ class PolygonDrawer(ctk.CTkFrame):
     def toggle_mode(self):
         if self.current_mode == "Draw":
             self.current_mode = "Edit"
-            self.modelabel.configure(text=f"{self.current_mode} Mode",font=('TkDefaultFont',self.fontsize))
+            self.modelabel.configure(text=f"{self.current_mode} Mode",font=('TkDefaultFont',self.fontsize*self.scale_factor))
             self.btn.configure(text="Save Edited Mask")
             self.edit_mode()
         else:
             self.current_mode = "Draw"
-            self.modelabel.configure(text=f"{self.current_mode} Mode",font=('TkDefaultFont',self.fontsize))           
+            self.modelabel.configure(text=f"{self.current_mode} Mode",font=('TkDefaultFont',self.fontsize*self.scale_factor))           
             self.btn.configure(text="Save New Mask")
             self.points = []
             self.scaledpoints = []
@@ -1083,7 +1097,7 @@ class PolygonDrawer(ctk.CTkFrame):
                         impath = os.path.join(folder, f"Segmented Slice{self.current_slice:03d}.png")
                         mask.save(impath)
                         mode_msg = "New" if self.current_mode == "Draw" else "Edited"
-                        CTkMessagebox(title=f"{mode_msg} Mask Save", message=f"{mode_msg} Mask saved to {impath}", icon='check')
+                        self.window.savelabel.configure(text=f"{mode_msg} Mask saved to {impath}")
                 else:
                     CTkMessagebox(master=self.window, message="Please use \"C\" to allocate cavity points before saving",icon="warning")
 

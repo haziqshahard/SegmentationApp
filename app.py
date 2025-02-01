@@ -12,6 +12,11 @@ from MaskViewer import *
 class App(ctk.CTk):
     """
     #Add a commenting system for individual points with the right click   
+
+    Remove the window that confirms saves, put a text confirmation at the bottom of the window
+    Change the font sizing for mac, seems like a bug setting the default font for everything
+    add a keyboard shortcut for saving
+
     """
     def __init__(self):
         super().__init__()
@@ -50,6 +55,7 @@ class App(ctk.CTk):
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
@@ -58,11 +64,16 @@ class App(ctk.CTk):
         # self.inforow.grid_rowconfigure(0, weight=1)
         # self.inforow.grid_columnconfigure(0, weight=1)
 
-        self.bottomrow = ctk.CTkFrame(self, fg_color=self.cget("fg_color"),border_width=0)
+        self.bottomrow = ctk.CTkFrame(self, fg_color=self.cget("fg_color"))
         self.bottomrow.grid(row=1, column=0, columnspan=2, sticky="nsew")
         self.bottomrow.grid_rowconfigure(0, weight=1)
         self.bottomrow.grid_columnconfigure(1, weight=1)
         self.bottomrow.grid_columnconfigure(0, weight=1)
+
+        self.inforow = ctk.CTkFrame(self, fg_color = self.cget("fg_color"),border_width=0)
+        self.inforow.grid(row=2, column=0, columnspan=2, sticky="nsew")
+        self.savelabel = ctk.CTkLabel(master=self.inforow, text="")
+        self.savelabel.grid(row=0, column=0, padx=10)
 
         self.segmentor = PolygonDrawer(self, row=0, column=0,darklight=self.darklight)
         self.viewhelper = ViewHelper(self, row=0, column=1,darklight=self.darklight)
@@ -101,13 +112,24 @@ class App(ctk.CTk):
         self.grid_columnconfigure(0, minsize = self.current_width * (1/2))
         self.grid_columnconfigure(1, minsize = self.current_width * (1/2))
         self.grid_rowconfigure(0,minsize=toprowminsize)
-        # self.grid_rowconfigure(1, minsize=(1-toprowminsize)*(1/2))
+        self.grid_rowconfigure(1, minsize=self.current_height * (1/4) * (10/11))
+        self.grid_rowconfigure(2, minsize=self.current_height * (1/4) * (1/11))
+
         self.bottomrow.grid_columnconfigure(0, minsize=caseselectorminsize)
 
     def on_key_press(self, event):
         self.segmentor.on_key_press(event)
         self.maskviewer.on_key_press(event)
         self.viewhelper.on_key_press(event)
+
+    # def switchtheme(self, event):
+    #     print("switching theme")
+    #     ctk.set_default_color_theme("themes/Greengage.json")
+    #     # Restart the application to apply the new theme
+    #     self.after(100, self.restart)
+    # def restart(self):
+    #     self.destroy()
+    #     os.execl(sys.executable, sys.executable, *sys.argv)
         
     def preloadcases(self):
         if os.path.exists('save.txt'):
@@ -119,7 +141,7 @@ class App(ctk.CTk):
                         # Split the line into key and value
                         key, value = line.split('=', 1)
                         self.settings[key.strip()] = value.strip()
-            if self.settings.get('paths') is not None:
+            if self.settings.get('paths') is not None:  
                 self.paths = ast.literal_eval(self.settings.get('paths'))
                 self.base_path = self.paths[0][0]
 
