@@ -8,6 +8,7 @@ from Segmentor import *
 from ViewHelper import *
 from CaseSelector import *
 from MaskViewer import *
+from ThreeDViewer import *
 
 class App(ctk.CTk):
     """
@@ -68,6 +69,7 @@ class App(ctk.CTk):
         self.bottomrow.grid(row=1, column=0, columnspan=2, sticky="nsew")
         self.bottomrow.grid_rowconfigure(0, weight=1)
         self.bottomrow.grid_columnconfigure(1, weight=1)
+        self.bottomrow.grid_columnconfigure(2, weight=1)
         self.bottomrow.grid_columnconfigure(0, weight=1)
 
         self.inforow = ctk.CTkFrame(self, fg_color = self.cget("fg_color"),border_width=0)
@@ -78,9 +80,8 @@ class App(ctk.CTk):
         self.segmentor = PolygonDrawer(self, row=0, column=0,darklight=self.darklight)
         self.viewhelper = ViewHelper(self, row=0, column=1,darklight=self.darklight)
         self.caseselector = CaseSelector(self.bottomrow, row=0, column=0,theme=self.theme,darklight=self.darklight)
-        self.maskviewer = MaskViewer(self.bottomrow, row=0,column=1,theme=self.theme,darklight=self.darklight)
-        # self.maskviewer.configure(fg_color="white",corner_radius=0)
-        # self.caseselector.configure(height=5)
+        self.maskviewer = MaskViewer(self.bottomrow, row=0,column=2,theme=self.theme,darklight=self.darklight)
+        self.threedviewer = ThreeDViewer(self.bottomrow, row=0, column=1, theme=self.theme, darklight = self.darklight)
         
         self.title("Segmentor App")
         self.protocol("WM_DELETE_WINDOW", lambda d="delete": saveeverything(d))
@@ -107,12 +108,12 @@ class App(ctk.CTk):
         self.current_height = self.winfo_height()
 
         toprowminsize = self.current_height * (3/4)
-        caseselectorminsize = self.current_width *(6/7)
+        caseselectorminsize = self.current_width *(3/7)
 
         self.grid_columnconfigure(0, minsize = self.current_width * (1/2))
         self.grid_columnconfigure(1, minsize = self.current_width * (1/2))
         self.grid_rowconfigure(0,minsize=toprowminsize)
-        self.grid_rowconfigure(1, minsize=self.current_height * (1/4) * (10/11))
+        self.grid_rowconfigure(1, minsize=self.current_height * (1/4) * (10/11))    
         self.grid_rowconfigure(2, minsize=self.current_height * (1/4) * (1/11))
 
         self.bottomrow.grid_columnconfigure(0, minsize=caseselectorminsize)
@@ -121,15 +122,6 @@ class App(ctk.CTk):
         self.segmentor.on_key_press(event)
         self.maskviewer.on_key_press(event)
         self.viewhelper.on_key_press(event)
-
-    # def switchtheme(self, event):
-    #     print("switching theme")
-    #     ctk.set_default_color_theme("themes/Greengage.json")
-    #     # Restart the application to apply the new theme
-    #     self.after(100, self.restart)
-    # def restart(self):
-    #     self.destroy()
-    #     os.execl(sys.executable, sys.executable, *sys.argv)
         
     def preloadcases(self):
         if os.path.exists('save.txt'):

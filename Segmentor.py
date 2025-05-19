@@ -237,6 +237,7 @@ class PolygonDrawer(ctk.CTkFrame):
                         self.window.current_time = val
                         self.window.slice_files, self.window.time_folders = utils.load_images(self.base_path)
                         self.window.load_image(slice_index = self.current_slice-1, time_index = self.time_index)
+                        self.window.threedviewer.update()
                         self.update()
                 elif val<1 or val>len(self.time_folders):         
                     CTkMessagebox(master=self.window, message="Please Enter a Valid Time from the Range", icon="warning")

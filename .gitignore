@@ -8,4 +8,14 @@ UNET.py
 save.txt
 image.png
 mask.png
+full_4D
+full_4D_nifti
+NiftiReconstruction
+testdata
+centers
+mplot3d
+mplot3d.ipynb
+mask.png
+fileselection.ipynb
+3dplottkinter.ipynb
 /__pycache__/

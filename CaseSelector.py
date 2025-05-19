@@ -166,7 +166,7 @@ class CaseSelector(ctk.CTkFrame):
                 _, time_folders = utils.load_images(case[0])
                 
                 self.process_mask__image(time_folders = time_folders, casename = case[0], dataset_case_dir=dataset_case_dir) #Transfers all the images and masks to the dataset folder
-                ES, ED = self.determine_ES_ED(time_folders, case[0]) #Determines which of the masks are ES/ED based on the mask area
+                ES,ED = self.determine_ES_ED(time_folders, case[0]) #Determines which of the masks are ES/ED based on the mask area
                 self.write_info(dataset_case_dir, case[0], ES, ED) #Writes all the necessary info to the dataset/info.txt file
                 self.update_progress(f"Creating check folder in {dataset_case_dir}", 50/100)
                 try: 
@@ -218,7 +218,7 @@ class CaseSelector(ctk.CTkFrame):
             mask2 = np.array(mask2)
             mask2[mask2>0] == 1
 
-            ES, ED = (mask1time, mask2time) if np.sum(mask1) > np.sum(mask2) else (mask2time, mask1time)
+            ES, ED = (mask1time, mask2time) if np.sum(mask2) > np.sum(mask1) else (mask2time, mask1time) #ED is larger than ES
         else:
             ES = "Error"
             ED = "Error"
@@ -492,6 +492,7 @@ class CaseSelector(ctk.CTkFrame):
             self.window.master.segmentor.update()
             self.window.master.viewhelper.update()
             self.window.master.maskviewer.update()
+            self.window.master.threedviewer.update()
         elif self.debug == True:
             print(self.paths[pathidx][0])
         self.selectedbutton = button

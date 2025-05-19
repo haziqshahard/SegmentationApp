@@ -293,8 +293,8 @@ class ViewHelper(ctk.CTkFrame):
         last_folder_name = os.path.basename(os.path.normpath(base_path))
         # Define folder switches using a dictionary for easier mapping
         folder_switch = {
-            "Results": "Images",
-            "Images": "Results"
+            "results": "images",
+            "images": "results"
         }
 
         if last_folder_name in folder_switch:

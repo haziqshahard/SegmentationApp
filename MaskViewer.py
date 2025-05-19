@@ -10,7 +10,7 @@ import utils
 from PIL import ImageFont
 
 class MaskViewer(ctk.CTkFrame):
-    def __init__(self, window, debug=False, row=1, column=1, theme="blue",darklight="dark"):
+    def __init__(self, window, debug=False, row=1, column=2, theme="blue",darklight="dark"):
         super().__init__(window)
         self.debug = debug
         self.window = window
@@ -61,7 +61,7 @@ class MaskViewer(ctk.CTkFrame):
 
     def update(self):
         self.destroy()
-        self.window.master.maskviewer = MaskViewer(self.window, row=0, column=1)
+        self.window.master.maskviewer = MaskViewer(self.window, row=0, column=2)
 
     def loadmask(self):
         """
