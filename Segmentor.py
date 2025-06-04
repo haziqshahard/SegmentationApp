@@ -73,7 +73,7 @@ class PolygonDrawer(ctk.CTkFrame):
         else:
             self.image_path = filedialog.askopenfilename(title="Select an image")
        
-        print("Image Path:",self.image_path)
+        # print("Image Path:",self.image_path)
         match = re.search(r"slice(\d{3})time(\d{3})", os.path.basename(self.image_path))
         self.current_slice = int(match.group(1))
         self.current_time = int(match.group(2))
@@ -82,7 +82,7 @@ class PolygonDrawer(ctk.CTkFrame):
         self.pilimage = Image.open(self.image_path)
         self.photo = ImageTk.PhotoImage(self.pilimage)
         self.slice_files, self.time_folders = utils.load_images(self.base_path)
-        print(self.time_folders)
+        # print(self.time_folders)
 
         #Just get these from the slice/time folders
             #For time index, check the index from the time folder
@@ -962,7 +962,8 @@ class PolygonDrawer(ctk.CTkFrame):
     
     def edit_mode(self):
         if self.current_mode == "Edit":
-            folder = self.base_path + "/"+self.image_path.split("/")[-2] + "/mask" 
+            folder = self.base_path + "/"+self.image_path.split("/")[-3] + "/mask" 
+            # print(folder)
             segmentedslice = folder + f"/slice{self.current_slice:03d}time{self.current_time:03d}.png"
             if os.path.exists(folder):
                 if os.path.exists(segmentedslice):
@@ -1004,110 +1005,102 @@ class PolygonDrawer(ctk.CTkFrame):
                 u_new = np.linspace(0, 1, self.smoothing)
                 #If cavity is present in the tag, get the index and then take it from self.scaledpoints
                 cavidx = [index for index, tup in enumerate(self.currentdottags) if "cavity" in tup]
-                if len(cavidx) >2:
-                    cavitypoints = [self.points[i] for i in cavidx]
-                    cavitypointsnp = np.array(cavitypoints)
-                    unsmoothed_points = cavitypointsnp[[0,-1]]
-                    middle_points = cavitypointsnp[1:-1]
+                # if len(cavidx) >2:
+                    # cavitypoints = [self.points[i] for i in cavidx]
+                    # cavitypointsnp = np.array(cavitypoints)
+                    # unsmoothed_points = cavitypointsnp[[0,-1]]
+                    # middle_points = cavitypointsnp[1:-1]
 
-                    # Perform smoothing on the middle points
-                    tck, u = splprep(middle_points.T, s=0)
-                    smoothed_middle_points = np.array(splev(np.linspace(0, 1, self.smoothing), tck)).T
+                    # # Perform smoothing on the middle points
+                    # tck, u = splprep(middle_points.T, s=0)
+                    # smoothed_middle_points = np.array(splev(np.linspace(0, 1, self.smoothing), tck)).T
 
-                    # Combine unsmoothed and smoothed points, ensuring the two unsmoothed points stay connected by a straight line
-                    all_points = np.vstack([unsmoothed_points[0], smoothed_middle_points, unsmoothed_points[1]])
+                    # # Combine unsmoothed and smoothed points, ensuring the two unsmoothed points stay connected by a straight line
+                    # all_points = np.vstack([unsmoothed_points[0], smoothed_middle_points, unsmoothed_points[1]])
 
-                    # Close the polygon by adding the first unsmoothed point at the end
-                    all_points_closed = np.vstack([all_points, unsmoothed_points[0]])
-                    smoothcav_coords = [tuple(point) for point in all_points_closed]
+                    # # Close the polygon by adding the first unsmoothed point at the end
+                    # all_points_closed = np.vstack([all_points, unsmoothed_points[0]])
+                    # smoothcav_coords = [tuple(point) for point in all_points_closed]
 
-                    def get_centroid(points):
-                        x_coords = [p[0] for p in points]
-                        y_coords = [p[1] for p in points]
-                        return (sum(x_coords) / len(points), sum(y_coords) / len(points))
+                def get_centroid(points):
+                    x_coords = [p[0] for p in points]
+                    y_coords = [p[1] for p in points]
+                    return (sum(x_coords) / len(points), sum(y_coords) / len(points))
 
-                    # Function to calculate the distance between two points
-                    def distance(point1, point2):
-                        return np.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
+                # Function to calculate the distance between two points
+                def distance(point1, point2):
+                    return np.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
-                    # Function to expand a polygon by a fixed number of pixels
-                    def expand_polygon(points, pixel_expansion):
-                        centroid = get_centroid(points)
+                # Function to expand a polygon by a fixed number of pixels
+                def expand_polygon(points, pixel_expansion):
+                    centroid = get_centroid(points)
+                    
+                    # Create a new set of vertices, each one moved outward by the given number of pixels
+                    new_points = []
+                    for point in points:
+                        # Calculate the vector from the centroid to the point
+                        vector = (point[0] - centroid[0], point[1] - centroid[1])
                         
-                        # Create a new set of vertices, each one moved outward by the given number of pixels
-                        new_points = []
-                        for point in points:
-                            # Calculate the vector from the centroid to the point
-                            vector = (point[0] - centroid[0], point[1] - centroid[1])
-                            
-                            # Normalize the vector
-                            vector_length = distance(centroid, point)
-                            if vector_length != 0:
-                                unit_vector = (vector[0] / vector_length, vector[1] / vector_length)
-                            else:
-                                unit_vector = (0, 0)
-                            
-                            # Expand the point by the fixed number of pixels along the direction of the unit vector
-                            new_point = (
-                                point[0] + unit_vector[0] * pixel_expansion, 
-                                point[1] + unit_vector[1] * pixel_expansion
-                            )
-                            new_points.append(new_point)
+                        # Normalize the vector
+                        vector_length = distance(centroid, point)
+                        if vector_length != 0:
+                            unit_vector = (vector[0] / vector_length, vector[1] / vector_length)
+                        else:
+                            unit_vector = (0, 0)
                         
-                        return new_points
+                        # Expand the point by the fixed number of pixels along the direction of the unit vector
+                        new_point = (
+                            point[0] + unit_vector[0] * pixel_expansion, 
+                            point[1] + unit_vector[1] * pixel_expansion
+                        )
+                        new_points.append(new_point)
                     
-                    smoothcav_coords = expand_polygon(smoothcav_coords, 2)
-                    cavity = True
+                    return new_points
+                
+                # smoothcav_coords = expand_polygon(smoothcav_coords, 2)
+                # cavity = True
 
-                    #Drawing myocardium
-                    pointsnp = np.array(self.points)
-                    tck,u = splprep(pointsnp.T, s=0)
-                    smoothedmyopoints = np.array(splev(u_new, tck)).T
-                    smoothmyocoords = [tuple(point) for point in smoothedmyopoints]
+                #Drawing myocardium
+                pointsnp = np.array(self.points)
+                tck,u = splprep(pointsnp.T, s=0)
+                smoothedmyopoints = np.array(splev(u_new, tck)).T
+                smoothmyocoords = [tuple(point) for point in smoothedmyopoints]
 
-                    # Create two separate masks for the two polygons
-                    myo_mask = Image.new("L", self.pilimage.size, 0)
-                    cav_mask = Image.new("L", self.pilimage.size, 0)
-                    
-                    # Draw the polygons on their respective masks
-                    myo_draw = ImageDraw.Draw(myo_mask)
-                    cav_draw = ImageDraw.Draw(cav_mask)
-                    
-                    myo_draw.polygon(smoothmyocoords, fill=255)
-                    cav_draw.polygon(smoothcav_coords, fill=127)
+                # Create two separate masks for the two polygons
+                myo_mask = Image.new("L", self.pilimage.size, 0)
+                # cav_mask = Image.new("L", self.pilimage.size, 0)
+                
+                # Draw the polygons on their respective masks
+                myo_draw = ImageDraw.Draw(myo_mask)
+                # cav_draw = ImageDraw.Draw(cav_mask)
+                
+                myo_draw.polygon(smoothmyocoords, fill=255)
+                # cav_draw.polygon(smoothcav_coords, fill=127)
 
-                    # Combine the masks and handle overlap
-                    image_size = self.pilimage.size
-                    for x in range(image_size[0]):
-                        for y in range(image_size[1]):
-                            myo_value = myo_mask.getpixel((x, y))
-                            cav_value = cav_mask.getpixel((x, y))
-                            
-                            if cav_value == 127 and myo_value == 255:
-                                # Overlap detected, set to 127
-                                draw.point((x, y), fill=255)
-                            elif cav_value == 127:
-                                # Non-overlapping cavity region
-                                draw.point((x, y), fill=127)
-                            elif myo_value == 255:
-                                # Non-overlapping myo region
-                                draw.point((x, y), fill=255)
+                # Combine the masks and handle overlap
+                image_size = self.pilimage.size
+                for x in range(image_size[0]):
+                    for y in range(image_size[1]):
+                        myo_value = myo_mask.getpixel((x, y))
+                        # cav_value = cav_mask.getpixel((x, y))
+                        
+                        if myo_value == 255:
+                            # Overlap detected, set to 127
+                            draw.point((x, y), fill=255)
 
-                    # mask.show()  # Display the visualization image
-                    
-                    if self.debug == True:
-                        impath = "mask.png"
-                        mask.save(impath)
-                        CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
-                    if not self.debug:
-                        folder = os.path.join(os.path.dirname(self.image_path), "mask")
-                        os.makedirs(folder, exist_ok=True)
-                        impath = os.path.join(folder,f"slice{self.current_slice:03d}time{self.current_time:03d}.png")
-                        mask.save(impath)
-                        mode_msg = "New" if self.current_mode == "Draw" else "Edited"
-                        self.window.savelabel.configure(text=f"{mode_msg} Mask saved to {impath}")
-                else:
-                    CTkMessagebox(master=self.window, message="Please use \"C\" to allocate cavity points before saving",icon="warning")
+                # mask.show()  # Display the visualization image
+                
+                if self.debug == True:
+                    impath = "mask.png"
+                    mask.save(impath)
+                    CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
+                if not self.debug:
+                    folder = os.path.join(os.path.dirname(os.path.dirname(self.image_path)), "mask")
+                    os.makedirs(folder, exist_ok=True)
+                    impath = os.path.join(folder,f"slice{self.current_slice:03d}time{self.current_time:03d}.png")
+                    mask.save(impath)
+                    mode_msg = "New" if self.current_mode == "Draw" else "Edited"
+                    self.window.savelabel.configure(text=f"{mode_msg} Mask saved to {impath}")
 
     #----------HOVER EVENTS----------
     def on_hover_enter(self, event, dot):
