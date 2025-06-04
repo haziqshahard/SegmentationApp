@@ -75,13 +75,14 @@ def load_images(base_path):
         # Get all time folders matching the format
         time_folders = sorted([d for d in os.listdir(base_path) 
                                     if os.path.isdir(os.path.join(base_path, d)) and time_pattern.match(d)])
-        # print(f"Time folders found: {len(self.time_folders)}")  # Debugging line
+        # print(base_path)
+        # print(f"Time folders found: {len(time_folders)}")  # Debugging line
 
         # Get all slice files for each time folder
-        slice_files = [sorted([f for f in os.listdir(os.path.join(base_path, t)) 
-                            if os.path.isfile(os.path.join(base_path, t, f)) and image_pattern.match(f)])
-                    for t in time_folders]
-        # print(f"Slice files found: {len(self.slice_files[0])}")  # Debugging line
+        slice_files = [sorted([f for f in os.listdir(os.path.join(base_path, t, "image")) 
+                            if os.path.isfile(os.path.join(base_path, t, "image",f)) and image_pattern.match(f)])
+                            for t in time_folders]
+        # print(f"Slice files found: {len(slice_files[0])}")  # Debugging line
         return slice_files, time_folders
 
     else:

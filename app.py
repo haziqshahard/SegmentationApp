@@ -164,7 +164,8 @@ class App(ctk.CTk):
         """Load and display the image based on current slice and time index."""
         time_folder = self.time_folders[time_index]
         slice_file = self.slice_files[time_index][slice_index]
-        self.image_path = os.path.join(self.base_path, time_folder, slice_file)
+        self.image_path = os.path.join(self.base_path, time_folder,"image" ,slice_file)
+        # print("Image Path:" + self.image_path)
 
         # Convert to the correct format for the operating system
         self.image_path = self.image_path.replace('\\', '/')

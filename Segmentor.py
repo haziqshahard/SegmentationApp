@@ -13,6 +13,7 @@ import ast
 import utils
 import platform
 from time import time
+import re
 class PolygonDrawer(ctk.CTkFrame):
     """
     #Window that enables the user to draw on the image required
@@ -71,13 +72,17 @@ class PolygonDrawer(ctk.CTkFrame):
             self.image_path = window.image_path
         else:
             self.image_path = filedialog.askopenfilename(title="Select an image")
-        self.current_slice = int(os.path.basename(self.image_path)[5:8])
-        self.current_time = int(os.path.basename(self.image_path)[12:15])
+       
+        print("Image Path:",self.image_path)
+        match = re.search(r"slice(\d{3})time(\d{3})", os.path.basename(self.image_path))
+        self.current_slice = int(match.group(1))
+        self.current_time = int(match.group(2))
         
-        self.base_path = "/".join(self.image_path.split("/")[:-2])
+        self.base_path = "/".join(self.image_path.split("/")[:-3])
         self.pilimage = Image.open(self.image_path)
         self.photo = ImageTk.PhotoImage(self.pilimage)
         self.slice_files, self.time_folders = utils.load_images(self.base_path)
+        print(self.time_folders)
 
         #Just get these from the slice/time folders
             #For time index, check the index from the time folder
@@ -232,7 +237,7 @@ class PolygonDrawer(ctk.CTkFrame):
                     self.current_time = val
                     timewindow.destroy()
                     if self.debug == False:
-                        self.window.image_path = os.path.join(self.base_path, f"time{val:03d}", f"slice{self.current_slice:3d}.png")
+                        self.window.image_path = os.path.join(self.base_path, f"time{val:03d}", "image",f"slice{self.current_slice:3d}.png")
                         self.window.time_index = self.time_index
                         self.window.current_time = val
                         self.window.slice_files, self.window.time_folders = utils.load_images(self.base_path)
@@ -470,7 +475,8 @@ class PolygonDrawer(ctk.CTkFrame):
     def updateimage(self, slice_index, time_index):
         time_folder = self.time_folders[time_index]
         slice_file = self.slice_files[time_index][slice_index]
-        image_path = os.path.join(self.base_path, time_folder, slice_file)
+        image_path = os.path.join(self.base_path, time_folder, "image" ,slice_file)
+        # print(image_path)
 
         # Convert to the correct format for the operating system
         image_path = image_path.replace('\\', '/')
@@ -491,8 +497,9 @@ class PolygonDrawer(ctk.CTkFrame):
         self.canvas.itemconfig(self.canvimg, image=self.scaled_photo)
 
         #Update label
-        self.current_slice = int(os.path.basename(image_path)[5:8])
-        self.current_time = int(os.path.basename(image_path)[12:15])
+        match = re.search(r"slice(\d{3})time(\d{3})", image_path)
+        self.current_slice = int(match.group(1))
+        self.current_time = int(match.group(2))
         self.filelabel.configure(text=f"Time:{self.current_time:02d}/{len(self.time_folders)}, Slice:{self.current_slice:02d}/{len(self.slice_files[0])}")    
             
         self.edit_mode()
@@ -955,8 +962,8 @@ class PolygonDrawer(ctk.CTkFrame):
     
     def edit_mode(self):
         if self.current_mode == "Edit":
-            folder = self.base_path + "/"+self.image_path.split("/")[-2] + "/segmented" 
-            segmentedslice = folder + f"/Segmented Slice{self.current_slice:03d}.png"
+            folder = self.base_path + "/"+self.image_path.split("/")[-2] + "/mask" 
+            segmentedslice = folder + f"/slice{self.current_slice:03d}time{self.current_time:03d}.png"
             if os.path.exists(folder):
                 if os.path.exists(segmentedslice):
                     self.points, self.scaledpoints, self.currentdottags = utils.masktopoints(self.numpoints, self.scale_factor, segmentedslice)
@@ -974,8 +981,8 @@ class PolygonDrawer(ctk.CTkFrame):
     def previous_poly(self):
         #Check if the previous slice(so long as its slice2) has a segmentation
         if self.current_slice >= 2:
-            folder = self.base_path + "/"+self.image_path.split("/")[-2] + "/segmented" 
-            segmentedslice = folder + f"/Segmented Slice{self.current_slice-1:03d}.png"
+            folder = self.base_path + "/"+self.image_path.split("/")[-2] + "/mask" 
+            segmentedslice = folder + f"/slice{self.current_slice-1:03d}time{self.current_time:03d}.png"
             if os.path.exists(folder):
                 if os.path.exists(segmentedslice):
                     self.points, self.scaledpoints, self.currentdottags = utils.masktopoints(self.numpoints, self.scale_factor, segmentedslice)
@@ -1093,9 +1100,9 @@ class PolygonDrawer(ctk.CTkFrame):
                         mask.save(impath)
                         CTkMessagebox(title="New Mask Save",message = f"Mask saved to {impath}", icon='check')
                     if not self.debug:
-                        folder = os.path.join(os.path.dirname(self.image_path), "segmented")
+                        folder = os.path.join(os.path.dirname(self.image_path), "mask")
                         os.makedirs(folder, exist_ok=True)
-                        impath = os.path.join(folder, f"Segmented Slice{self.current_slice:03d}.png")
+                        impath = os.path.join(folder,f"slice{self.current_slice:03d}time{self.current_time:03d}.png")
                         mask.save(impath)
                         mode_msg = "New" if self.current_mode == "Draw" else "Edited"
                         self.window.savelabel.configure(text=f"{mode_msg} Mask saved to {impath}")

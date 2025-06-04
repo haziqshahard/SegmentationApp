@@ -96,7 +96,7 @@ class MaskViewer(ctk.CTkFrame):
             self.photo = ImageTk.PhotoImage(img)
 
     def updateimage(self, slice_index, time_index):
-        self.mask_path = os.path.join(self.base_path, self.time_folders[self.time_index], "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
+        self.mask_path = os.path.join(self.base_path, self.time_folders[self.time_index], "mask", f"slice{self.slice_index+1:03d}time{self.time_index+1:03d}.png")
         # time_folder = self.time_folders[time_index]
         # slice_file = self.slice_files[time_index][slice_index]
         # self.image_path = os.path.join(self.base_path, time_folder, slice_file)
@@ -134,7 +134,7 @@ class MaskViewer(ctk.CTkFrame):
             self.slice_index = self.slice_files[self.time_index].index(f"slice{self.window.master.segmentor.current_slice:03d}time{self.window.master.segmentor.current_time:03d}.png")
 
         self.updateimage(self.slice_index, self.time_index)
-        self.mask_path = os.path.join(self.base_path, self.time_folders[self.time_index], "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
+        self.mask_path = os.path.join(self.base_path, self.time_folders[self.time_index], "mask", f"slice{self.slice_index+1:03d}time{self.time_index+1}.png")
         # print(self.time_index, self.slice_index)
     
     def on_resize(self,event):
@@ -176,7 +176,7 @@ class MaskViewer(ctk.CTkFrame):
 
         # Convert to the correct format for the operating system
         # self.image_path = self.image_path.replace('\\', '/')
-        self.mask_path = os.path.join(self.base_path, self.time_folders[self.time_index], "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
+        self.mask_path = os.path.join(self.base_path, self.time_folders[self.time_index], "mask", f"slice{self.slice_index+1:03d}time{self.time_index+1:03d}.png")
         # print(self.image_path)
         # print(f"Loading image: {image_path}")  # Debugging line
         self.loadmask()

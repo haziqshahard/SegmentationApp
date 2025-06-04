@@ -129,7 +129,7 @@ class ThreeDViewer(ctk.CTkFrame):
 
 
     def handle_right_click(self,event):
-        print("Right Button Clicked")
+        # print("Right Button Clicked")
         self.context_menu.post(event.x_root, event.y_root)
 
     def load_slices(self,images):
@@ -182,7 +182,7 @@ class ThreeDViewer(ctk.CTkFrame):
     def load_paths(self):
         time_folder = self.time_folders[self.time_index] #Time folder will change based on what is being viewed
         images = [self.slice_files[self.time_index][i] for i in range(0, 36)]
-        self.images = [os.path.join(self.base_path, time_folder, img) for img in images]
+        self.images = [os.path.join(self.base_path, time_folder, "image" ,img) for img in images]
         self.find_centroid(self.images) #Determine the centroid for the image stack
         self.images = self.images[0] #Saving just the first one for image size purposes
 

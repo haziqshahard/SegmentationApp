@@ -159,11 +159,11 @@ class ViewHelper(ctk.CTkFrame):
         """Load and display the image based on current slice and time index."""
         time_folder = self.time_folders[time_index]
         slice_file = self.slice_files[time_index][slice_index]
-        self.image_path = os.path.join(self.base_path, time_folder, slice_file)
+        self.image_path = os.path.join(self.base_path, time_folder, "image" , slice_file)
 
         # Convert to the correct format for the operating system
         self.image_path = self.image_path.replace('\\', '/')
-        self.mask_path = os.path.join(self.base_path, time_folder, "segmented", f"Segmented Slice{self.slice_index+1}")
+        self.mask_path = os.path.join(self.base_path, time_folder, "mask", f"slice{self.slice_index+1:03d}time{self.time_index:03d}")
 
         if os.path.isfile(self.image_path) != True:
             CTkMessagebox(master=self.window, message=f"Error loading image {self.image_path}", icon="cancel")
@@ -257,13 +257,13 @@ class ViewHelper(ctk.CTkFrame):
         time_folder = self.time_folders[self.time_index]
         
         if self.debug == True:
-            self.mask_path = os.path.join(self.base_path, time_folder, "segmented", f"Segmented Slice{self.slice_index+1:03d}.png")
+            self.mask_path = os.path.join(self.base_path, time_folder, "mask", f"slice{self.slice_index+1:03d}time{self.time_index+1:03d}.png")
         else:
             #viewhelpertimeindex is relative to the viewhelper
 
-            folder = self.window.segmentor.base_path + "/" + time_folder + "/segmented" 
+            folder = self.window.segmentor.base_path + "/" + time_folder + "/mask" 
             self.current_slice = int(os.path.basename(self.image_path)[5:8])
-            self.mask_path = folder + f"/Segmented Slice{self.current_slice:03d}.png"      
+            self.mask_path = folder + f"/slice{self.current_slice:03d}time{self.time_index+1:03d}.png"      
         # print(self.mask_path)
         # print(self.time_index, self.slice_index)
         if self.show_polygon:
@@ -426,7 +426,7 @@ class ViewHelper(ctk.CTkFrame):
     def updateimage(self, slice_index, time_index):
         time_folder = self.time_folders[time_index]
         slice_file = self.slice_files[time_index][slice_index]
-        self.image_path = os.path.join(self.base_path, time_folder, slice_file)
+        self.image_path = os.path.join(self.base_path, time_folder, "image",slice_file)
         # print(self.image_path)
 
         # Convert to the correct format for the operating system

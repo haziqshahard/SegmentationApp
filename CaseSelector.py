@@ -63,7 +63,7 @@ class CaseSelector(ctk.CTkFrame):
         btndialog = ctk.CTkFrame(master=self.root)
         btndialog.grid(row=1, column=0, sticky="se", padx = 5)
         btn = ctk.CTkButton(master=btndialog,text="Select Case", command=self.selectcase, font=(self.font,self.fontsize*self.scale_factor))
-        btn2 = ctk.CTkButton(master=btndialog,text="Create Dataset", command=self.open_transfer_window, font=(self.font,self.fontsize*self.scale_factor))
+        # btn2 = ctk.CTkButton(master=btndialog,text="Create Dataset", command=self.open_transfer_window, font=(self.font,self.fontsize*self.scale_factor))
 
         def open_url(url):
             webbrowser.open_new(url)
@@ -87,7 +87,7 @@ class CaseSelector(ctk.CTkFrame):
         self.hover_color = getattr(btn, "_hover_color")
         self.originalborder = btn.cget("border_color")  
         btn.grid(row=0, column=1, padx=10, pady=10, sticky="se")
-        btn2.grid(row=0, column=0, padx=10, pady=10, sticky="se")
+        # btn2.grid(row=0, column=0, padx=10, pady=10, sticky="se")
 
         self.selectedbutton = None
 
@@ -238,7 +238,7 @@ class CaseSelector(ctk.CTkFrame):
         # Process mask and image files for each time folder
         for idx, time_folder in enumerate(time_folders):
             time_folder_path = os.path.join(casename, time_folder)
-            segmented_path = os.path.join(time_folder_path, "segmented")
+            segmented_path = os.path.join(time_folder_path, "mask")
 
             if not os.path.exists(segmented_path):
                 self.update_progress(f"Segmented path does not exist: {segmented_path}", (idx+1)/ total_time_folders)
@@ -398,12 +398,12 @@ class CaseSelector(ctk.CTkFrame):
             for time in times:
                 if not os.path.exists(os.path.join(check_path, time)):
                     os.makedirs(os.path.join(check_path, time)) 
-                slices = os.listdir(os.path.join(case_path, time, "segmented")) if dataset == False else os.listdir(os.path.join(case_path, time)) #Mask Slices
-                slices = [slice for slice in slices if slice.startswith("Segmented")]
+                slices = os.listdir(os.path.join(case_path, time, "mask")) if dataset == False else os.listdir(os.path.join(case_path, time)) #Mask Slices
+                slices = [slice for slice in slices if slice.startswith("slice")]
                 allintimes = os.listdir(os.path.join(case_path, time)) if dataset == False else os.listdir(os.path.join(os.path.dirname(case_path), "image",time))
                 imageslices = [item for item in allintimes if item.startswith("slice")] #Image Slices
                 for i in range(len(slices)):
-                    maskpath = os.path.join(case_path, time, "segmented", slices[i]) if dataset == False else os.path.join(case_path, time, slices[i])
+                    maskpath = os.path.join(case_path, time, "mask", slices[i]) if dataset == False else os.path.join(case_path, time, slices[i])
                     maskoverlay = utils.extract_and_draw_contours(maskpath)
                     image = np.array(Image.open(os.path.join(case_path, time,imageslices[i]))) if dataset == False else np.array(Image.open(os.path.join(os.path.dirname(case_path), "image",time,imageslices[i])))
                     overlaidimg = utils.overlay_images(image, maskoverlay)
@@ -415,7 +415,7 @@ class CaseSelector(ctk.CTkFrame):
         case_path = self.paths[pathidx][0]
         all_items = os.listdir(case_path)
         times = [item for item in all_items if item.startswith("time")]
-        times_with_segmentation = [time for time in times if os.path.isdir(os.path.join(case_path, time, "segmented"))]
+        times_with_segmentation = [time for time in times if os.path.isdir(os.path.join(case_path, time, "mask"))]
         if "/Images/" in case_path:
             results_path = case_path.replace("Images", "Results")
             if not os.path.exists(results_path):
@@ -487,7 +487,7 @@ class CaseSelector(ctk.CTkFrame):
             self.window.master.base_path = self.paths[pathidx][0]
             self.window.master.slice_files, self.window.master.time_folders = utils.load_images(self.window.master.base_path)
             self.window.master.current_time = int(self.window.master.slice_files[0][0][12:15])
-            image_path = os.path.join(self.window.master.base_path, f"time{self.window.master.current_time:03d}", f'slice001time{self.window.master.current_time:03d}.png')
+            image_path = os.path.join(self.window.master.base_path, f"time{self.window.master.current_time:03d}", "image",f'slice001time{self.window.master.current_time:03d}.png')
             self.window.master.image_path = image_path.replace('\\', '/')
             self.window.master.segmentor.update()
             self.window.master.viewhelper.update()
