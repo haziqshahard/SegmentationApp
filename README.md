@@ -70,3 +70,6 @@ SegmentationApp is a Python-based tool designed for performing  manual image seg
 You can customize the following:
 - Dot, Line and Polygon Color
 - Dot and Line size
+
+## Acknowledgments
+Portions of this codebase were developed with assistance from [ChatGPT](https://chat.openai.com) by OpenAI (GPT-4, accessed June 2025).
