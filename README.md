@@ -72,4 +72,4 @@ You can customize the following:
 - Dot and Line size
 
 ## Acknowledgments
-Portions of this codebase were developed with assistance from [ChatGPT](https://chat.openai.com) by OpenAI (GPT-4, accessed June 2025).
+Portions of this codebase were developed with assistance from [ChatGPT](https://chat.openai.com) by OpenAI.
